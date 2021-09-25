@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_entity/status/status.dart';
 import 'package:hg_orm/dao/api/dao.dart';
+import 'package:hg_orm/dao/api/export.dart' as hg;
+import 'package:hg_orm/dao/sembast/convert.dart';
 import 'package:hg_orm/dao/sembast/database_helper.dart';
 import 'package:sembast/sembast.dart';
 
@@ -27,10 +29,13 @@ abstract class DataDao<T extends DataModel> implements Dao {
 
   late final bool _logicDelete;
 
+  late final SembastConvert _convert;
+
   DataDao({bool logicDelete = true}) {
     _logicDelete = logicDelete;
     store = stringMapStoreFactory.store(storeName);
-    dataBase = DatabaseHelper.database;
+    dataBase = SembastDatabaseHelper.database;
+    _convert = SembastConvert();
   }
 
   /// 保存，存在更新，不存在插入
@@ -120,16 +125,35 @@ abstract class DataDao<T extends DataModel> implements Dao {
     }
   }
 
+  hg.Filter? getLogicFilter(hg.Filter? filter) {
+    if (_logicDelete) {
+      hg.Filter logicFindFilter;
+      if (null == filter) {
+        logicFindFilter = hg.SingleFilter.notEquals(field: sampleModel.isDelete.name, value: true);
+      } else {
+        logicFindFilter = hg.GroupFilter.and([
+          hg.SingleFilter.notEquals(field: sampleModel.isDelete.name, value: true),
+          filter,
+        ]);
+      }
+      return logicFindFilter;
+    } else {
+      return filter;
+    }
+  }
+
   /// 自定义查询
   /// 查询入口方法之一，其他查看[findFirst]，[count]
-  Future<List<T>> find({Filter? filter, List<SortOrder>? sortOrders, int? limit, int? offset, Boundary? start, Boundary? end}) async {
-    Filter filterWithoutDelete = null == filter
-        ? Filter.notEquals(sampleModel.isDelete.name, true)
-        : Filter.and([
-            Filter.notEquals(sampleModel.isDelete.name, true),
-            filter,
-          ]);
-    Finder finder = Finder(filter: filterWithoutDelete, sortOrders: sortOrders, limit: limit, offset: offset, start: start, end: end);
+  Future<List<T>> find({hg.Filter? filter, List<hg.Sort>? sorts, int? limit, int? offset, Boundary? start, Boundary? end}) async {
+    hg.Filter? logicFilter = getLogicFilter(filter);
+    Finder finder = Finder(
+      filter: logicFilter == null ? null : _convert.filterConvert(logicFilter),
+      sortOrders: sorts?.map((sort) => _convert.sortConvert(sort)).toList(),
+      limit: limit,
+      offset: offset,
+      start: start,
+      end: end,
+    );
     List<RecordSnapshot> record = await store.find(dataBase, finder: finder);
     List<T> newModelList = await fill(record);
     return newModelList;
@@ -137,13 +161,13 @@ abstract class DataDao<T extends DataModel> implements Dao {
 
   /// 查询全部
   Future<List<T>> findAll() async {
-    return await this.find();
+    return await find();
   }
 
   /// 通过ID查询
   Future<T?> findByID(String id) async {
-    List<T> newModelList = await this.find(filter: Filter.byKey(id));
-    if (CollectionUtils.isEmpty(newModelList)) {
+    List<T> newModelList = await find(filter: hg.SingleFilter.equals(field: sampleModel.id.name, value: id));
+    if (newModelList.isEmpty) {
       return null;
     }
     return newModelList[0];
@@ -151,19 +175,21 @@ abstract class DataDao<T extends DataModel> implements Dao {
 
   /// 通过ID列表查询
   Future<List<T>> findByIDList(List<String> idList) async {
-    return await this.find(filter: Filter.inList(Field.key, idList));
+    return await find(filter: hg.SingleFilter.inList(field: sampleModel.id.name, value: idList));
   }
 
   /// 查询首个
   /// 查询入口方法，其他查看[find]，[count]
-  Future<T?> findFirst({Filter? filter, List<SortOrder>? sortOrders, int? limit, int? offset, Boundary? start, Boundary? end}) async {
-    Filter filterWithoutDelete = null == filter
-        ? Filter.notEquals(sampleModel.isDelete.name, true)
-        : Filter.and([
-            Filter.notEquals(sampleModel.isDelete.name, true),
-            filter,
-          ]);
-    Finder finder = Finder(filter: filterWithoutDelete, sortOrders: sortOrders, limit: limit, offset: offset, start: start, end: end);
+  Future<T?> findFirst({hg.Filter? filter, List<hg.Sort>? sorts, int? limit, int? offset, Boundary? start, Boundary? end}) async {
+    hg.Filter? logicFilter = getLogicFilter(filter);
+    Finder finder = Finder(
+      filter: logicFilter == null ? null : _convert.filterConvert(logicFilter),
+      sortOrders: sorts?.map((sort) => _convert.sortConvert(sort)).toList(),
+      limit: limit,
+      offset: offset,
+      start: start,
+      end: end,
+    );
     RecordSnapshot? record = await store.findFirst(dataBase, finder: finder);
     if (null == record) {
       return null;
@@ -174,21 +200,16 @@ abstract class DataDao<T extends DataModel> implements Dao {
 
   /// 计数
   /// 查询入口方法，其他查看[find]，[findFirst]
-  Future<int> count({Filter? filter}) async {
-    Filter filterWithoutDelete = null == filter
-        ? Filter.notEquals(sampleModel.isDelete.name, true)
-        : Filter.and([
-            Filter.notEquals(sampleModel.isDelete.name, true),
-            filter,
-          ]);
-    int num = await store.count(dataBase, filter: filterWithoutDelete);
+  Future<int> count({hg.Filter? filter}) async {
+    hg.Filter? logicFilter = getLogicFilter(filter);
+    int num = await store.count(dataBase, filter: logicFilter == null ? null : _convert.filterConvert(logicFilter));
     return num;
   }
 
   /// 填充数据
   Future<List<T>> fill(List<RecordSnapshot> recordList) async {
     // 为空 返回空数组
-    if (CollectionUtils.isEmpty(recordList)) {
+    if (recordList.isEmpty) {
       return <T>[];
     }
     // 讲recordList转换位mapList，便于对数据进行修改

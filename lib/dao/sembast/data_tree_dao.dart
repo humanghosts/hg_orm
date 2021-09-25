@@ -1,7 +1,9 @@
+import 'package:hg_entity/hg_entity.dart';
+import 'package:hg_orm/dao/sembast/data_dao.dart';
 import 'package:sembast/sembast.dart';
 
 /// 树形公共的规范与实现
-abstract class BaseTreeDao<T extends TreeModelPlus> extends BaseDao<T> {
+abstract class BaseTreeDao<T extends DataTreeModel> extends DataDao<T> {
   /// 插入
   /// TODO 效率问题
   @override

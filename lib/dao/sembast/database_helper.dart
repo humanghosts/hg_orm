@@ -1,11 +1,12 @@
 import 'dart:developer';
 
+import 'package:hg_orm/dao/api/export.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
 
-class DatabaseHelper {
+class SembastDatabaseHelper implements DatabaseHelper {
   /// 数据库
   static Database? _database;
 
@@ -21,10 +22,11 @@ class DatabaseHelper {
   final String path;
   final DatabaseListener? listener;
 
-  DatabaseHelper({required this.path, this.listener});
+  SembastDatabaseHelper({required this.path, this.listener});
 
   /// 初始化数据库
-  Future init() async {
+  @override
+  Future<void> initial() async {
     // 获取app的路径 path_provider包下
     final appDocumentDir = await getApplicationDocumentsDirectory();
     // 获取全量数据库路径

@@ -18,7 +18,7 @@ dependencies:
     hosted:
       name: hg_entity
       url: http://localhost:8080
-    version: ^0.0.6
+    version: ^0.0.7
   sembast:
   path_provider:
 

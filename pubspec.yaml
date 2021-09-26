@@ -1,6 +1,8 @@
 name: hg_orm
 description: orm package
 version: 0.0.2
+authors:
+  - humanghost
 publish_to: http://localhost:8080
 homepage: https://github.com/humanghosts/hg_orm
 

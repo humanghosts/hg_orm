@@ -1,7 +1,7 @@
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:sembast/sembast.dart';
 
-class SembastConvert implements hg.Convert {
+class SembastConvert extends hg.Convert {
   @override
   Filter filterConvert(hg.Filter filter) {
     if (filter is hg.SingleFilter) {

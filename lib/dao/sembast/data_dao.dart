@@ -3,7 +3,7 @@ import 'dart:convert';
 
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_entity/status/status.dart';
-import 'package:hg_orm/dao/api/dao.dart';
+import 'package:hg_orm/context/context.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:hg_orm/dao/sembast/convert.dart';
 import 'package:hg_orm/dao/sembast/database_helper.dart';
@@ -11,34 +11,38 @@ import 'package:sembast/sembast.dart';
 
 typedef FutureOrFunc = FutureOr<dynamic> Function(Transaction transaction);
 
-abstract class DataDao<T extends DataModel> implements Dao {
-  /// 获取新的实例
-  T get newModel;
-
-  /// Dao处理的实体的样本，用于获取属性等字段
-  T get sampleModel;
-
-  /// 存储库名称
-  String get storeName;
-
+abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
   /// 获取实体所在存储库的名称
   late StoreRef store;
 
   /// 获取数据库实例
   late Database dataBase;
 
+  /// 实体例
+  late final T _sampleModel;
+
+  /// 逻辑删除
   late final bool _logicDelete;
 
+  /// 类型转换
   late final SembastConvert _convert;
 
   DataDao({bool logicDelete = true}) {
     _logicDelete = logicDelete;
+    _sampleModel = NewModelCache.get(T) as T;
     store = stringMapStoreFactory.store(storeName);
     dataBase = SembastDatabaseHelper.database;
     _convert = SembastConvert();
   }
 
+  /// Dao处理的实体的样本，用于获取属性等字段
+  T get sampleModel => _sampleModel;
+
+  /// 设置存储库名称
+  String get storeName;
+
   /// 保存，存在更新，不存在插入
+  @override
   Future<void> save(T model, [Transaction? tx]) async {
     switch (model.status) {
       case DataStatus.insert:
@@ -56,30 +60,29 @@ abstract class DataDao<T extends DataModel> implements Dao {
     }
   }
 
-  /// TODO
-  Map toMap(T model) {
-    return {};
-  }
-
   Future<void> _insert(T model, [Transaction? tx]) async {
     model.createTime.value = DateTime.now();
     model.timestamp.value = DateTime.now();
-    await store.record(model.id.value).add(tx ?? dataBase, toMap(model));
+    await store.record(model.id.value).add(tx ?? dataBase, _convert.modelValue(model));
+    DataModelCache.put(model.id.value, model);
   }
 
   Future<void> _update(T model, [Transaction? tx]) async {
     model.timestamp.value = DateTime.now();
-    await store.record(model.id.value).update(tx ?? dataBase, toMap(model));
+    await store.record(model.id.value).update(tx ?? dataBase, _convert.modelValue(model));
+    DataModelCache.put(model.id.value, model);
   }
 
   Future<void> _delete(T model, [Transaction? tx]) async {
     if (_logicDelete) {
       model.isDelete.value = true;
       model.deleteTime.value = DateTime.now();
-      await store.record(model.id.value).update(tx ?? dataBase, toMap(model));
+      await store.record(model.id.value).update(tx ?? dataBase, _convert.modelValue(model));
+      DataModelCache.remove(model.id.value);
       return;
     }
     await store.record(model.id.value).delete(tx ?? dataBase);
+    DataModelCache.remove(model.id.value);
   }
 
   /// 保存，存在更新，不存在插入
@@ -102,6 +105,7 @@ abstract class DataDao<T extends DataModel> implements Dao {
   }
 
   /// 逻辑移除
+  @override
   Future<void> remove(T model, [Transaction? tx]) async {
     model.markNeedRemove();
     await save(model, tx);
@@ -143,7 +147,7 @@ abstract class DataDao<T extends DataModel> implements Dao {
   }
 
   /// 自定义查询
-  /// 查询入口方法之一，其他查看[findFirst]，[count]
+  @override
   Future<List<T>> find({hg.Filter? filter, List<hg.Sort>? sorts, int? limit, int? offset, Boundary? start, Boundary? end}) async {
     hg.Filter? logicFilter = getLogicFilter(filter);
     Finder finder = Finder(
@@ -155,8 +159,20 @@ abstract class DataDao<T extends DataModel> implements Dao {
       end: end,
     );
     List<RecordSnapshot> record = await store.find(dataBase, finder: finder);
-    List<T> newModelList = await fill(record);
-    return newModelList;
+    return await merge(record);
+  }
+
+  /// 用原生的方法查询
+  Future<List<T>> nativeFind({Filter? filter, List<SortOrder>? sortOrders, int? limit, int? offset, Boundary? start, Boundary? end}) async {
+    Filter filterWithoutDelete = null == filter
+        ? Filter.notEquals(sampleModel.isDelete.name, true)
+        : Filter.and([
+            Filter.notEquals(sampleModel.isDelete.name, true),
+            filter,
+          ]);
+    Finder finder = Finder(filter: filterWithoutDelete, sortOrders: sortOrders, limit: limit, offset: offset, start: start, end: end);
+    List<RecordSnapshot> record = await store.find(dataBase, finder: finder);
+    return await merge(record);
   }
 
   /// 查询全部
@@ -165,6 +181,7 @@ abstract class DataDao<T extends DataModel> implements Dao {
   }
 
   /// 通过ID查询
+  @override
   Future<T?> findByID(String id) async {
     List<T> newModelList = await find(filter: hg.SingleFilter.equals(field: sampleModel.id.name, value: id));
     if (newModelList.isEmpty) {
@@ -179,7 +196,6 @@ abstract class DataDao<T extends DataModel> implements Dao {
   }
 
   /// 查询首个
-  /// 查询入口方法，其他查看[find]，[count]
   Future<T?> findFirst({hg.Filter? filter, List<hg.Sort>? sorts, int? limit, int? offset, Boundary? start, Boundary? end}) async {
     hg.Filter? logicFilter = getLogicFilter(filter);
     Finder finder = Finder(
@@ -194,28 +210,51 @@ abstract class DataDao<T extends DataModel> implements Dao {
     if (null == record) {
       return null;
     }
-    List<T> newModelList = await fill([record]);
+    List<T> newModelList = await merge([record]);
     return newModelList[0];
   }
 
   /// 计数
-  /// 查询入口方法，其他查看[find]，[findFirst]
+  @override
   Future<int> count({hg.Filter? filter}) async {
     hg.Filter? logicFilter = getLogicFilter(filter);
     int num = await store.count(dataBase, filter: logicFilter == null ? null : _convert.filterConvert(logicFilter));
     return num;
   }
 
-  /// 填充数据
-  Future<List<T>> fill(List<RecordSnapshot> recordList) async {
+  Future<List<T>> merge(List<RecordSnapshot> recordList) async {
     // 为空 返回空数组
     if (recordList.isEmpty) {
       return <T>[];
     }
+    // 最终的返回结果
+    List<T> resultList = [];
     // 讲recordList转换位mapList，便于对数据进行修改
-    List<Map<String, Object?>> mapList = recordList.map((record) {
-      return json.decode(json.encode(record.value)) as Map<String, Object?>;
-    }).toList();
+    List<Map<String, Object?>> mapList = [];
+    for (RecordSnapshot record in recordList) {
+      Map<String, Object?> map = json.decode(json.encode(record.value)) as Map<String, Object?>;
+      String id = map[sampleModel.id.name] as String;
+      T? cacheModel = DataModelCache.get(id);
+      if (cacheModel != null) {
+        resultList.add(cacheModel);
+        continue;
+      } else {
+        mapList.add(map);
+      }
+    }
+    if (mapList.isEmpty) {
+      return resultList;
+    }
+    List<T> fillList = await fill(mapList);
+    for (T fillModel in fillList) {
+      DataModelCache.put(fillModel.id.value, fillModel);
+    }
+    resultList.addAll(fillList);
+    return resultList;
+  }
+
+  /// 填充数据
+  Future<List<T>> fill(List<Map<String, Object?>> mapList) async {
     // 获取模型属性列表
     List<Attribute> attributeList = sampleModel.attributes.list;
     // 遍历属性列表
@@ -227,7 +266,7 @@ abstract class DataDao<T extends DataModel> implements Dao {
       }
     }
     // 返回转换后的数据
-    List<T> modelList = mapList.map((e) => newModel.fromMap(e) as T).toList();
+    List<T> modelList = mapList.map((e) => _convert.setModel(NewModelCache.get(T) as T, e) as T).toList();
     // 填充后操作
     await afterFill(modelList);
     return modelList;
@@ -248,47 +287,40 @@ abstract class DataDao<T extends DataModel> implements Dao {
   Future<void> fillRefer(Attribute attr, List<Map<String, dynamic>> mapList) async {
     // 属性名称
     String attrName = attr.name;
-    // 属性类型
-    Type attrType = attr.type;
-    // 不是BaseModel类型的不填充
-    if (!ModelUtils.isModel(attrType)) {
+    // 不是DataModelAttribute类型的不填充
+    if (attr is! DataModelAttribute && attr is! DataModelListAttribute) {
       return;
     }
     // 收集主键集合，用于一次查询
-    Set<String> attrValueSet = new Set();
+    Set<String> attrValueSet = {};
     // 遍历数据，收集主键
     for (Map<String, dynamic> map in mapList) {
       if (null == map[attrName]) {
         continue;
       }
-      // TODO 其他类型的属性处理 map类型、custom类型
-      if (attr is ListAttribute) {
+      if (attr is DataModelListAttribute) {
         // 集合类型的
-        Iterable it = map[attrName];
-        it.forEach((e) {
-          attrValueSet.add(e.toString());
-        });
+        List<String> idList = map[attrName] as List<String>;
+        for (String id in idList) {
+          attrValueSet.add(id);
+        }
       } else {
-        // 字符串类型的
         attrValueSet.add(map[attrName]);
       }
     }
     // 主键为空不处理
-    if (CollectionUtils.isEmpty(attrValueSet)) {
+    if (attrValueSet.isEmpty) {
       return;
     }
-    // 找不到对应类型的dao，不处理
-    DataDao? dao = DbCtx.daos.getNew(attrType.toString());
-    if (null == dao) {
-      throw Exception("can find ${attrType.toString()}`s dao");
-    }
+    Type attrType = attr.type;
+    DataDao dao = DaoCache.get(attrType);
     // 查询关联数据
-    List<Model> refModelList = await dao.findByIDList(attrValueSet.toList());
+    List<DataModel> refModelList = await dao.findByIDList(attrValueSet.toList());
     // 将关联数据转换为id数据映射
-    Map<String, Model> idModelMap = new Map();
-    if (CollectionUtils.isNotEmpty(refModelList)) {
-      for (Model refModel in refModelList) {
-        idModelMap[refModel.id.value!] = refModel;
+    Map<String, Model> idModelMap = {};
+    if (refModelList.isNotEmpty) {
+      for (DataModel refModel in refModelList) {
+        idModelMap[refModel.id.value] = refModel;
       }
     }
     // 再次遍历数据，将id替换为完整数据
@@ -297,8 +329,7 @@ abstract class DataDao<T extends DataModel> implements Dao {
       if (null == value) {
         continue;
       }
-      // TODO 其他类型的属性处理 map类型、custom类型
-      if (attr is ListAttribute) {
+      if (attr is DataModelListAttribute) {
         List refValueList = [];
         value.forEach((e) {
           Model? model = idModelMap[e];

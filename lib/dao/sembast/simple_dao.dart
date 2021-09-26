@@ -77,4 +77,9 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
     }
     return list[0];
   }
+
+  @override
+  Future<int> count({hg.Filter? filter}) async {
+    return await store.count(dataBase);
+  }
 }

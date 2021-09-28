@@ -9,10 +9,16 @@ abstract class DatabaseHelper {
   DatabaseHelper(this.listener);
 
   /// Type must use ModelType
-  Future<void> initial(Map<Type, Dao>? daoMap, Map<Type, Model Function()>? modelMap) async {
+  Future<void> initial({Map<Type, Model Function()>? modelMap, Map<Type, Dao>? daoMap}) async {
     // 打开数据库
     await open();
     listener?.afterDatabaseOpen?.call();
+    if (null != modelMap) {
+      modelMap.forEach((key, value) {
+        NewModelCache.register(key, value);
+      });
+    }
+    listener?.afterModelRegister?.call();
     // 注册dao
     if (null != daoMap) {
       daoMap.forEach((key, value) {
@@ -20,11 +26,6 @@ abstract class DatabaseHelper {
       });
     }
     listener?.afterDaoRegister?.call();
-    if (null != modelMap) {
-      modelMap.forEach((key, value) {
-        NewModelCache.register(key, value);
-      });
-    }
   }
 
   /// db专属，打开数据库

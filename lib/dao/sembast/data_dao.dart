@@ -29,16 +29,13 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
   DataDao({bool logicDelete = true}) {
     _logicDelete = logicDelete;
     _sampleModel = NewModelCache.get(T) as T;
-    store = stringMapStoreFactory.store(storeName);
+    store = stringMapStoreFactory.store(T.toString());
     dataBase = SembastDatabaseHelper.database;
     _convert = SembastConvert();
   }
 
   /// Dao处理的实体的样本，用于获取属性等字段
   T get sampleModel => _sampleModel;
-
-  /// 设置存储库名称
-  String get storeName;
 
   /// 保存，存在更新，不存在插入
   @override

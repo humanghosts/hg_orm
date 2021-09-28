@@ -20,13 +20,11 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
   late final String _storeName;
 
   SimpleDao() {
+    _storeName = T.toString();
     store = stringMapStoreFactory.store("simple");
     dataBase = SembastDatabaseHelper.database;
     _convert = SembastConvert();
   }
-
-  /// 存储库名称
-  String get storeName => _storeName;
 
   /// 保存，存在更新，不存在插入
   @override
@@ -57,6 +55,12 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
 
   Future<void> _delete(T model, [Transaction? tx]) async {
     await store.record(_storeName).delete(tx ?? dataBase);
+  }
+
+  @override
+  Future<void> remove(T model) async {
+    model.markNeedRemove();
+    await save(model);
   }
 
   @override

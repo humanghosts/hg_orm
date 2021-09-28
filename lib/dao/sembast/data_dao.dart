@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_entity/status/status.dart';
 import 'package:hg_orm/context/context.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:hg_orm/dao/sembast/convert.dart';

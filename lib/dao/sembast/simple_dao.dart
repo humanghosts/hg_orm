@@ -1,5 +1,4 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_entity/status/status.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:sembast/sembast.dart';
 

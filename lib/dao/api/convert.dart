@@ -82,7 +82,7 @@ abstract class Convert {
     // 一般属性
     else {
       Type type = attribute.type;
-      if (type == DateTime) {
+      if (type == DateTime || type.toString() == "DateTime?") {
         return (attribute.value as DateTime).millisecondsSinceEpoch;
       } else {
         return attribute.value;
@@ -132,7 +132,8 @@ abstract class Convert {
           }
           attribute.value = modelList;
         } else if (attribute is SimpleModelListAttribute) {
-          attribute.value = listValue.map((e) => setModel(NewModelCache.get(attribute.type), value) as SimpleModel).toList();
+          attribute.value =
+              listValue.map((e) => setModel(NewModelCache.get(attribute.type), value) as SimpleModel).toList();
         } else {
           attribute.value = listValue.map((e) => setModel(NewModelCache.get(attribute.type), value)).toList();
         }
@@ -152,7 +153,7 @@ abstract class Convert {
     // 一般属性
     else {
       Type type = attribute.type;
-      if (type == DateTime) {
+      if (type == DateTime || type.toString() == "DateTime?") {
         attribute.value = DateTime.fromMillisecondsSinceEpoch(value as int);
       } else {
         attribute.value = value;

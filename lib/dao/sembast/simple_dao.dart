@@ -29,18 +29,18 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
   /// 保存，存在更新，不存在插入
   @override
   Future<void> save(T model, [Transaction? tx]) async {
-    switch (model.status) {
-      case DataStatus.insert:
+    switch (model.state) {
+      case States.insert:
         await _insert(model, tx);
         break;
-      case DataStatus.update:
+      case States.update:
         await _update(model, tx);
         break;
-      case DataStatus.delete:
+      case States.delete:
         await _delete(model, tx);
         break;
-      case DataStatus.none:
-      case DataStatus.query:
+      case States.none:
+      case States.query:
         break;
     }
   }
@@ -59,7 +59,7 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
 
   @override
   Future<void> remove(T model) async {
-    model.markNeedRemove();
+    model.state = States.delete;
     await save(model);
   }
 

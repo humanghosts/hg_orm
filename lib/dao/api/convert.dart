@@ -1,5 +1,5 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/context/context.dart';
+import 'package:hg_orm/context/cache.dart';
 import 'package:hg_orm/dao/api/dao.dart';
 
 import 'filter.dart';
@@ -102,9 +102,9 @@ abstract class Convert {
         Dao<Model> dao = DaoCache.get(attribute.type);
         attribute.value = dao.findByID(value as String) as DataModel?;
       } else if (attribute is SimpleModelAttribute) {
-        attribute.value = setModel(NewModelCache.get(attribute.type), value) as SimpleModel;
+        attribute.value = setModel(ModelInitCache.get(attribute.type), value) as SimpleModel;
       } else {
-        attribute.value = setModel(NewModelCache.get(attribute.type), value);
+        attribute.value = setModel(ModelInitCache.get(attribute.type), value);
       }
     }
     // 自定义属性
@@ -133,9 +133,9 @@ abstract class Convert {
           attribute.value = modelList;
         } else if (attribute is SimpleModelListAttribute) {
           attribute.value =
-              listValue.map((e) => setModel(NewModelCache.get(attribute.type), value) as SimpleModel).toList();
+              listValue.map((e) => setModel(ModelInitCache.get(attribute.type), value) as SimpleModel).toList();
         } else {
-          attribute.value = listValue.map((e) => setModel(NewModelCache.get(attribute.type), value)).toList();
+          attribute.value = listValue.map((e) => setModel(ModelInitCache.get(attribute.type), value)).toList();
         }
       } else if (attribute is CustomListAttribute) {
         attribute.value = listValue.map((e) {

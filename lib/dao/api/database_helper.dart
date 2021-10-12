@@ -1,5 +1,5 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/context/context.dart';
+import 'package:hg_orm/context/cache.dart';
 
 import 'dao.dart';
 
@@ -19,7 +19,7 @@ abstract class DatabaseHelper {
     Map<Type, Model Function()>? modelMap = getModelMap?.call();
     if (null != modelMap) {
       modelMap.forEach((key, value) {
-        NewModelCache.register(key, value);
+        ModelInitCache.register(key, value);
       });
     }
     await listener?.afterModelRegister?.call();

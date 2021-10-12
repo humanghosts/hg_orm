@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/context/context.dart';
+import 'package:hg_orm/context/cache.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:hg_orm/dao/sembast/convert.dart';
 import 'package:hg_orm/dao/sembast/database_helper.dart';
@@ -29,7 +29,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
 
   DataDao({bool logicDelete = true}) {
     _logicDelete = logicDelete;
-    _sampleModel = NewModelCache.get(T) as T;
+    _sampleModel = ModelInitCache.get(T) as T;
     store = stringMapStoreFactory.store(T.toString());
     dataBase = SembastDatabaseHelper.database;
     _convert = SembastConvert();
@@ -334,7 +334,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     }
     _log(null, action, "属性填充完成");
     // 返回转换后的数据
-    List<T> modelList = mapList.map((e) => _convert.setModel(NewModelCache.get(T) as T, e) as T).toList();
+    List<T> modelList = mapList.map((e) => _convert.setModel(ModelInitCache.get(T) as T, e) as T).toList();
     _log(null, action, "类型转换完成");
     // 填充后操作
     await afterFill(modelList);

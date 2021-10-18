@@ -38,7 +38,8 @@ class SingleFilter extends Filter {
     appendValue(value);
   }
 
-  SingleFilter.greaterThanOrEquals({required this.field, required Object value}) : op = SingleFilterOp.greaterThanOrEquals {
+  SingleFilter.greaterThanOrEquals({required this.field, required Object value})
+      : op = SingleFilterOp.greaterThanOrEquals {
     appendValue(value);
   }
 
@@ -46,11 +47,16 @@ class SingleFilter extends Filter {
     appendValue(value);
   }
 
+  SingleFilter.notInList({required this.field, required List value}) : op = SingleFilterOp.notInList {
+    appendValue(value);
+  }
+
   SingleFilter.matches({required this.field, required Object value}) : op = SingleFilterOp.matches {
     appendValue(value);
   }
 
-  SingleFilter.between({required this.field, required Object start, required Object end}) : op = SingleFilterOp.between {
+  SingleFilter.between({required this.field, required Object start, required Object end})
+      : op = SingleFilterOp.between {
     appendValue(start);
     appendValue(end);
   }
@@ -133,6 +139,13 @@ abstract class FilterOp {
   const FilterOp._(this.title, this.symbol);
 }
 
+/// 添加操作符步骤
+/// 1. OP类操作
+///   1.1 添加符号
+///   1.2 添加常量
+///   1.3 添加到list和map中
+/// 2. Filter类中添加命名构造函数
+/// 3. 不同数据库的convert类中，添加操作符转换
 class SingleFilterOp extends FilterOp {
   const SingleFilterOp._(String title, String symbol) : super._(title, symbol);
 
@@ -145,6 +158,7 @@ class SingleFilterOp extends FilterOp {
   static const greaterThanSymbol = ">";
   static const greaterThanOrEqualsSymbol = ">=";
   static const inListSymbol = "in";
+  static const notInListSymbol = "notin";
   static const matchesSymbol = "matches";
   static const betweenSymbol = "between";
   static const containsAllSymbol = "containsAll";
@@ -159,6 +173,7 @@ class SingleFilterOp extends FilterOp {
   static const SingleFilterOp greaterThan = SingleFilterOp._("大于", greaterThanSymbol);
   static const SingleFilterOp greaterThanOrEquals = SingleFilterOp._("大于等于", greaterThanOrEqualsSymbol);
   static const SingleFilterOp inList = SingleFilterOp._("在范围内", inListSymbol);
+  static const SingleFilterOp notInList = SingleFilterOp._("不在范围内", inListSymbol);
   static const SingleFilterOp matches = SingleFilterOp._("匹配", matchesSymbol);
   static const SingleFilterOp between = SingleFilterOp._("在区间内", betweenSymbol);
   static const SingleFilterOp containsAll = SingleFilterOp._("包含全部", containsAllSymbol);
@@ -174,6 +189,7 @@ class SingleFilterOp extends FilterOp {
     greaterThan,
     greaterThanOrEquals,
     inList,
+    notInList,
     matches,
     between,
     containsAll,
@@ -190,6 +206,7 @@ class SingleFilterOp extends FilterOp {
     greaterThanSymbol: greaterThan,
     greaterThanOrEqualsSymbol: greaterThanOrEquals,
     inListSymbol: inList,
+    notInListSymbol: notInList,
     matchesSymbol: matches,
     betweenSymbol: between,
     containsAllSymbol: containsAll,

@@ -19,12 +19,19 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
   /// 存储库名称
   late final String _storeName;
 
+  /// 实体例
+  late final T _sampleModel;
+
   SimpleDao() {
     _storeName = T.toString();
     store = stringMapStoreFactory.store("simple");
     dataBase = SembastDatabaseHelper.database;
     _convert = SembastConvert();
+    _sampleModel = ModelInitCache.get(T) as T;
   }
+
+  /// Dao处理的实体的样本，用于获取属性等字段
+  T get sampleModel => _sampleModel;
 
   /// 保存，存在更新，不存在插入
   @override

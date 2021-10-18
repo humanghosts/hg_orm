@@ -34,6 +34,8 @@ class SembastConvert extends hg.Convert {
         return Filter.greaterThanOrEquals(field, valueList[0]);
       case hg.SingleFilterOp.inList:
         return Filter.inList(field, valueList[0] as List);
+      case hg.SingleFilterOp.notInList:
+        return Filter.not(Filter.inList(field, valueList[0] as List));
       case hg.SingleFilterOp.matches:
         return Filter.matches(field, valueList[0].toString());
       case hg.SingleFilterOp.between:

@@ -29,7 +29,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
 
   DataDao({bool logicDelete = true}) {
     _logicDelete = logicDelete;
-    _sampleModel = ModelInitCache.get(T) as T;
+    _sampleModel = ConstructorCache.get(T) as T;
     store = stringMapStoreFactory.store(T.toString());
     dataBase = SembastDatabaseHelper.database;
     _convert = SembastConvert();
@@ -208,8 +208,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
             Filter.notEquals(sampleModel.isDelete.name, true),
             filter,
           ]);
-    Finder finder = Finder(
-        filter: filterWithoutDelete, sortOrders: sortOrders, limit: limit, offset: offset, start: start, end: end);
+    Finder finder = Finder(filter: filterWithoutDelete, sortOrders: sortOrders, limit: limit, offset: offset, start: start, end: end);
     List<RecordSnapshot> record = await store.find(dataBase, finder: finder);
     _log(null, action, "读取成功");
     List<T> modeList = await merge(record);
@@ -334,7 +333,11 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     }
     _log(null, action, "属性填充完成");
     // 返回转换后的数据
-    List<T> modelList = mapList.map((e) => _convert.setModel(ModelInitCache.get(T) as T, e) as T).toList();
+    List<T> modelList = [];
+    for (var e in mapList) {
+      T model = await _convert.setModel(ConstructorCache.get(T) as T, e) as T;
+      modelList.add(model);
+    }
     _log(null, action, "类型转换完成");
     // 填充后操作
     await afterFill(modelList);

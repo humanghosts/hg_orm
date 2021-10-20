@@ -4,16 +4,18 @@ import 'package:hg_orm/dao/api/dao.dart';
 class DaoCache {
   DaoCache._();
 
-  static final Map<Type, Dao> _cache = {};
+  static final Map<String, Dao> _cache = {};
 
-  static void register<T extends Dao>(Type type, T dao) {
-    _cache[type] = dao;
+  static void put<T extends Dao>(Type type, T dao) {
+    _cache["$type"] = dao;
   }
 
   static T get<T extends Dao>(Type type) {
-    if (!_cache.containsKey(type)) {
-      throw Exception("register ${type.toString()}'s dao first");
-    }
+    return getStr(type.toString());
+  }
+
+  static T getStr<T extends Dao>(String type) {
+    assert(_cache.containsKey(type), "register ${type.toString()}'s dao first");
     return _cache[type] as T;
   }
 }

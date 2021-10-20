@@ -94,7 +94,7 @@ packages:
       name: hg_entity
       url: "http://localhost:8080"
     source: hosted
-    version: "0.0.29"
+    version: "0.0.36"
   lints:
     dependency: transitive
     description:

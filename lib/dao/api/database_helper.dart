@@ -1,5 +1,6 @@
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/context/cache.dart';
+import 'package:hg_orm/dao/api/entities.dart';
 
 import 'dao.dart';
 
@@ -10,26 +11,23 @@ abstract class DatabaseHelper {
 
   /// Type must use ModelType
   Future<void> initial({
-    Map<Type, Model Function()> Function()? getModelMap,
+    Map<Type, Object Function([Map<String, dynamic>? args])> Function()? getConstructorMap,
     Map<Type, Dao> Function()? getDaoMap,
   }) async {
     // 打开数据库
     await open();
     await listener?.afterDatabaseOpen?.call();
-    Map<Type, Model Function()>? modelMap = getModelMap?.call();
-    if (null != modelMap) {
-      modelMap.forEach((key, value) {
-        ModelInitCache.register(key, value);
-      });
-    }
+    ormEntitiesMap.forEach((key, value) {
+      ConstructorCache.put(key, value);
+    });
+    getConstructorMap?.call().forEach((key, value) {
+      ConstructorCache.put(key, value);
+    });
     await listener?.afterModelRegister?.call();
-    Map<Type, Dao>? daoMap = getDaoMap?.call();
     // 注册dao
-    if (null != daoMap) {
-      daoMap.forEach((key, value) {
-        DaoCache.register(key, value);
-      });
-    }
+    getDaoMap?.call().forEach((key, value) {
+      DaoCache.put(key, value);
+    });
     await listener?.afterDaoRegister?.call();
   }
 

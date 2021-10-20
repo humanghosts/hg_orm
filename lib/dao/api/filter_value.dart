@@ -1,8 +1,13 @@
 import 'package:hg_entity/attribute/attribute_custom.dart';
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/dao/api/filter.dart';
+import 'package:hg_orm/hg_orm.dart';
 
-class SingleFilterValue implements CustomValue {
+abstract class FilterValue implements CustomValue {
+  Filter? asFilter();
+}
+
+class SingleFilterValue implements FilterValue {
   SingleFilter? filter;
 
   @override
@@ -16,96 +21,162 @@ class SingleFilterValue implements CustomValue {
   }
 
   @override
-  Object? toMap() => asMap(filter);
+  Object? toMap() {
+    SingleFilter? filter = this.filter;
+    if (null == filter) return null;
+    List<Object> filterValue = filter.value;
+    List<Object> value = filterValue;
+    if (ConstructorCache.containsKey(filter.valueType)) {
+      Type rawType = ConstructorCache.getRawType(filter.valueType);
+      value = <Object>[];
+      for (Object oneValue in filterValue) {
+        if (rawType == DataModel) {
+          value.add((oneValue as DataModel).id.value);
+        } else if (rawType == SimpleModel) {
+          value.add(Convert.getModelValue(oneValue as SimpleModel));
+        } else if (rawType == CustomValue) {
+          Object? mapValue = (oneValue as CustomValue).toMap();
+          if (null == mapValue) {
+            continue;
+          }
+          value.add(mapValue);
+        }
+      }
+    }
+
+    return {
+      "field": filter.field,
+      "op": filter.op.symbol,
+      "value": value,
+      "valueType": filter.valueType,
+    };
+  }
 
   @override
-  void fromMap(Object value) {
-    if (value is Map) {
-      filter = asFilter(value);
+  void fromMap(Object value) async {
+    if (value is! Map) {
+      return;
+    }
+    // 字段
+    String field = value["field"];
+    // 操作符
+    String opSymbol = value["op"];
+    SingleFilterOp op = SingleFilterOp.map[opSymbol]!;
+    // 过滤器
+    SingleFilter filter = SingleFilter(field: field, op: op);
+    this.filter = filter;
+    // 值列表
+    List mapValueList = value["value"];
+    if (mapValueList.isEmpty) {
+      return;
+    }
+    // 值类型
+    String valueType = value["valueType"];
+    // 实体类型
+    if (ConstructorCache.containsKeyStr(valueType)) {
+      // 原始值类型
+      Type rawType = ConstructorCache.getRawTypeStr(valueType);
+      // 遍历所有值
+      for (Object mapValue in mapValueList) {
+        // 数据模型
+        if (rawType == DataModel) {
+          DataDao dao = DaoCache.getStr(valueType);
+          if (mapValue is List) {
+            filter.appendList(await dao.findByIDList(mapValue as List<String>));
+          } else {
+            Object? result = await dao.findByID(mapValue as String);
+            if (null != result) {
+              // result为空，说明这个id的数据被删除了，不用管了，相当于惰性删除
+              filter.append(result);
+            }
+          }
+        }
+        // 简单模型
+        else if (rawType == SimpleModel) {
+          if (mapValue is List) {
+            List<SimpleModel> oneValueAsList = [];
+            for (Object oneMapValue in mapValue) {
+              oneValueAsList.add(await Convert.setModelValue(ConstructorCache.getStr(valueType), oneMapValue) as SimpleModel);
+            }
+            filter.appendList(oneValueAsList);
+          } else {
+            filter.append(await Convert.setModelValue(ConstructorCache.getStr(valueType), mapValue) as SimpleModel);
+          }
+        }
+        // 自定义值类型
+        else if (rawType == CustomValue) {
+          if (mapValue is List) {
+            List<CustomValue> oneValueAsList = [];
+            for (Object oneMapValue in mapValue) {
+              CustomValue customValue = ConstructorCache.getStr(valueType);
+              customValue.fromMap(oneMapValue);
+              oneValueAsList.add(customValue);
+            }
+            filter.appendList(oneValueAsList);
+          } else {
+            CustomValue customValue = ConstructorCache.getStr(valueType);
+            customValue.fromMap(mapValue);
+            filter.append(customValue);
+          }
+        }
+        // 其它实体类型
+        else {
+          if (mapValue is List) {
+            filter.appendList(mapValue);
+          } else {
+            filter.append(mapValue);
+          }
+        }
+      }
+    }
+    // 其它类型
+    else {
+      for (Object oneValue in mapValueList) {
+        if (oneValue is List) {
+          filter.appendList(oneValue);
+        } else {
+          filter.append(oneValue);
+        }
+      }
     }
   }
 
   @override
   SingleFilterValue clone() {
-    Object? map = toMap();
     SingleFilterValue newFilterValue = SingleFilterValue();
-    if (null != map) {
-      newFilterValue.fromMap(map as Map);
-    }
+    newFilterValue.filter = filter?.clone();
     return newFilterValue;
   }
 
-  static Object? asMap(SingleFilter? filter) {
-    if (null == filter) return null;
-    return {
-      "field": filter.field,
-      "op": filter.op.symbol,
-      "value": filter.value,
-      "valueType": filter.valueType,
-    };
-  }
-
-  static SingleFilter asFilter(Map map) {
-    String field = map["field"];
-    String opSymbol = map["op"];
-    SingleFilterOp op = SingleFilterOp.map[opSymbol]!;
-    SingleFilter filter = SingleFilter(field: field, op: op);
-    filter.appendAll(map["value"]);
+  @override
+  SingleFilter? asFilter() {
     return filter;
   }
 }
 
-class GroupFilterValue implements CustomValue {
-  GroupFilter? filters;
+class GroupFilterValue implements FilterValue {
+  GroupFilterOp op = GroupFilterOp.and;
+  final List<FilterValue> filters = [];
 
   @override
-  bool get isNull {
-    GroupFilter? filters = this.filters;
-    return filters == null || filters.children.isEmpty;
-  }
+  bool get isNull => filters.isEmpty;
 
   @override
   void merge(CustomValue value) {
     if (value is GroupFilterValue) {
-      filters = value.filters;
+      op = value.op;
+      filters.clear();
+      filters.addAll(value.filters);
     }
   }
 
   @override
-  Object? toMap() => asMap(filters);
-
-  @override
-  void fromMap(Object value) {
-    if (value is Map) {
-      filters = asFilter(value);
-    }
-  }
-
-  @override
-  GroupFilterValue clone() {
-    Object? map = toMap();
-    GroupFilterValue newFilterValue = GroupFilterValue();
-    if (null != map) {
-      newFilterValue.fromMap(map as Map);
-    }
-    return newFilterValue;
-  }
-
-  static Object? asMap(GroupFilter? filters) {
-    if (null == filters) return null;
+  Object? toMap() {
+    if (filters.isEmpty) return null;
     List<Map> childrenMap = [];
-    for (Filter child in filters.children) {
-      String type;
-      Object? value;
-      if (child is SingleFilter) {
-        type = "SingleFilter";
-        value = SingleFilterValue.asMap(child);
-      } else if (child is GroupFilter) {
-        type = "GroupFilter";
-        value = GroupFilterValue.asMap(child);
-      } else {
-        continue;
-      }
+    for (FilterValue child in filters) {
+      String type = child.runtimeType.toString();
+      Object? value = child.toMap();
       if (value == null) {
         continue;
       }
@@ -115,26 +186,48 @@ class GroupFilterValue implements CustomValue {
       });
     }
     return {
-      "op": filters.op.symbol,
+      "op": op.symbol,
       "children": childrenMap,
     };
   }
 
-  static GroupFilter asFilter(Map map) {
-    String opSymbol = map["op"];
-    List<Map> children = map["children"];
-    GroupFilterOp op = GroupFilterOp.map[opSymbol]!;
-    GroupFilter filters = GroupFilter(op: op);
+  @override
+  void fromMap(Object value) {
+    if (value is! Map) {
+      return;
+    }
+    String opSymbol = value["op"];
+    op = GroupFilterOp.map[opSymbol]!;
+    List<Map> children = value["children"];
+    filters.clear();
     for (Map child in children) {
       String type = child["type"];
       Map value = child["value"] as Map;
-      if (type == "SingleFilter") {
-        filters.children.add(SingleFilterValue.asFilter(value));
-      }
-      if (type == "GroupFilter") {
-        filters.children.add(GroupFilterValue.asFilter(value));
+      FilterValue customValue = ConstructorCache.getStr(type);
+      customValue.fromMap(value);
+      filters.add(customValue);
+    }
+  }
+
+  @override
+  GroupFilterValue clone() {
+    GroupFilterValue newFilterValue = GroupFilterValue();
+    newFilterValue.op = op;
+    for (FilterValue filter in filters) {
+      newFilterValue.filters.add(filter.clone() as FilterValue);
+    }
+    return newFilterValue;
+  }
+
+  @override
+  GroupFilter? asFilter() {
+    GroupFilter groupFilter = GroupFilter(op: op);
+    for (FilterValue child in filters) {
+      Filter? filter = child.asFilter();
+      if (null != filter) {
+        groupFilter.children.add(filter);
       }
     }
-    return filters;
+    return groupFilter;
   }
 }

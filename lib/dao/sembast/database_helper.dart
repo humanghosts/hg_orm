@@ -12,11 +12,8 @@ class SembastDatabaseHelper extends DatabaseHelper {
 
   /// 获取数据库
   static Database get database {
-    if (_database == null) {
-      throw Exception("database is not init,please check");
-    } else {
-      return _database!;
-    }
+    assert(_database != null);
+    return _database!;
   }
 
   final String path;

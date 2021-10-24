@@ -99,6 +99,11 @@ class SingleFilter extends Filter {
     }
   }
 
+  void clear() {
+    _value.clear();
+    _valueType = null;
+  }
+
   @override
   SingleFilter clone() {
     SingleFilter newSingleFilter = SingleFilter(field: field, op: op);

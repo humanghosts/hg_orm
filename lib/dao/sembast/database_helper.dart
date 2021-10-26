@@ -16,9 +16,17 @@ class SembastDatabaseHelper extends DatabaseHelper {
     return _database!;
   }
 
+  /// 数据库路径
   final String path;
 
-  SembastDatabaseHelper({required this.path, DatabaseListener? listener}) : super(listener);
+  /// 数据模型是否缓存
+  static bool dataModelCache = true;
+
+  SembastDatabaseHelper({
+    required this.path,
+    DatabaseListener? listener,
+    dataModelCache = true,
+  }) : super(listener);
 
   /// 初始化数据库
   @override

@@ -76,15 +76,32 @@ class SingleFilter extends Filter {
   List<Object> get value => _value;
 
   void append(Object value) {
+    if (value is List) {
+      appendList(value);
+      return;
+    }
     _valueType ??= value.runtimeType;
-    assert(value.runtimeType == _valueType);
+    assert("${value.runtimeType}" == "$_valueType");
     _value.add(value);
+  }
+
+  void set(int index, Object value) {
+    _valueType ??= value.runtimeType;
+    assert("${value.runtimeType}" == "$_valueType");
+    _value[index] = value;
+  }
+
+  T get<T>(int index) {
+    if (_valueType == null) {
+      return _value[index] as T;
+    }
+    return _value[index] as T;
   }
 
   void appendList(List valueList) {
     for (Object value in valueList) {
       _valueType ??= value.runtimeType;
-      assert(value.runtimeType == _valueType);
+      assert("${value.runtimeType}" == "$_valueType");
     }
     _value.add(valueList);
   }

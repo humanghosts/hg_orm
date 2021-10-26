@@ -40,7 +40,7 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
   }
 
   @override
-  bool fillFilter(Attribute attr) {
+  bool fillFilter(Attribute attr, [bool? cache]) {
     if (sampleModel.parent.name == attr.name) {
       return false;
     }
@@ -49,11 +49,26 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
 
   /// 按树查找
   /// 先全查回来，然后组装成树
-  Future<List<T>> findTree({hg.Filter? filter, List<hg.Sort>? sorts, int? limit, int? offset, Boundary? start, Boundary? end}) async {
-    List<T> modelList = await find(filter: filter, sorts: sorts, limit: limit, offset: offset, start: start, end: end);
-    if (modelList.isEmpty) {
-      return modelList;
-    }
+  Future<List<T>> findTree({
+    hg.Filter? filter,
+    List<hg.Sort>? sorts,
+    int? limit,
+    int? offset,
+    Boundary? start,
+    Boundary? end,
+    bool? cache,
+  }) async {
+    List<T> modelList = await find(
+      filter: filter,
+      sorts: sorts,
+      limit: limit,
+      offset: offset,
+      start: start,
+      end: end,
+      cache: cache,
+    );
+    if (modelList.isEmpty) return modelList;
+
     // 组装树
     Map<String, T> modelMap = {};
     for (T model in modelList) {

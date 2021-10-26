@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:sembast/sembast.dart';
 
+@immutable
 class SembastConvert extends hg.Convert {
   @override
   Filter filterConvert(hg.Filter filter) {

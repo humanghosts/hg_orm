@@ -17,7 +17,7 @@ abstract class Convert {
     return getModelValue(model);
   }
 
-  /// 仓库的数据类型转换为model类型
+  /// 仓库的数据类型转换为model类型，最好保证model是新的
   Future<Model> setModel(Model model, Object? value) async {
     return await setModelValue(model, value);
   }
@@ -27,7 +27,7 @@ abstract class Convert {
     return getAttributeValue(attribute);
   }
 
-  /// 仓库的数据类型回设attribute的value
+  /// 仓库的数据类型回设attribute的value,最好保证attribute是新的
   Future<Attribute> setAttribute(Attribute attribute, Object? value) async {
     return await setAttributeValue(attribute, value);
   }
@@ -128,24 +128,27 @@ abstract class Convert {
       if (attribute.isNull) {
         attribute.value = ConstructorCache.get(attribute.type);
       }
-      attribute.value!.fromMap(value);
+      await attribute.value!.fromMap(value);
     }
     // 列表属性
     else if (attribute is ListAttribute) {
       List listValue = value as List;
+      // 实体列表属性
       if (attribute is ModelListAttribute) {
+        // 数据模型列表属性
         if (attribute is DataModelListAttribute) {
           Dao<Model> dao = DaoCache.get(attribute.type);
-          List<DataModel> modelList = [];
+          attribute.clear();
           for (Object obj in listValue) {
             DataModel? model = await dao.findByID(obj as String) as DataModel?;
             if (null == model) {
               continue;
             }
-            modelList.add(model);
+            attribute.append(model);
           }
-          attribute.value = modelList;
-        } else if (attribute is SimpleModelListAttribute) {
+        }
+        // 简单模型列表属性
+        else if (attribute is SimpleModelListAttribute) {
           attribute.clear();
           for (var oneValue in listValue) {
             attribute.append(await setModelValue(ConstructorCache.get(attribute.type), oneValue) as SimpleModel);
@@ -156,15 +159,22 @@ abstract class Convert {
             attribute.append(await setModelValue(ConstructorCache.get(attribute.type), oneValue));
           }
         }
-      } else if (attribute is CustomListAttribute) {
-        attribute.value = listValue.map((e) {
+      }
+      // 自定义值列表属性
+      else if (attribute is CustomListAttribute) {
+        attribute.clear();
+        for (Object e in listValue) {
           CustomValue cv = ConstructorCache.get(attribute.type);
           cv.fromMap(e);
-          return cv;
-        }).toList();
-      } else if (attribute is DateTimeListAttribute) {
+          attribute.append(cv);
+        }
+      }
+      // 时间列表属性
+      else if (attribute is DateTimeListAttribute) {
         attribute.value = listValue.map((e) => DateTime.fromMillisecondsSinceEpoch(e as int)).toList();
-      } else {
+      }
+      // 其它列表属性
+      else {
         attribute.value = listValue;
       }
     }

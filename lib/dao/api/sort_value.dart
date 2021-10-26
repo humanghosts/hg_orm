@@ -25,7 +25,7 @@ class SortValue implements CustomValue {
   }
 
   @override
-  void fromMap(Object value) {
+  Future<void> fromMap(Object value) async {
     if (value is Map) {
       sort = Sort(
         field: value["field"],

@@ -24,22 +24,42 @@ class SingleFilterValue implements FilterValue {
   Object? toMap() {
     SingleFilter? filter = this.filter;
     if (null == filter) return null;
-    List<Object> filterValue = filter.value;
-    List<Object> value = filterValue;
+    List<Object> filterValueList = filter.value;
+    List<Object> value = filterValueList;
     if (ConstructorCache.containsKey(filter.valueType)) {
       Type rawType = ConstructorCache.getRawType(filter.valueType);
       value = <Object>[];
-      for (Object oneValue in filterValue) {
+      for (Object filterValue in filterValueList) {
         if (rawType == DataModel) {
-          value.add((oneValue as DataModel).id.value);
-        } else if (rawType == SimpleModel) {
-          value.add(Convert.getModelValue(oneValue as SimpleModel));
-        } else if (rawType == CustomValue) {
-          Object? mapValue = (oneValue as CustomValue).toMap();
-          if (null == mapValue) {
-            continue;
+          if (filterValue is List) {
+            value.add(filterValue.map((e) => (e as DataModel).id.value).toList());
+          } else {
+            value.add((filterValue as DataModel).id.value);
           }
-          value.add(mapValue);
+        } else if (rawType == SimpleModel) {
+          if (filterValue is List) {
+            value.add(filterValue.map((e) => Convert.getModelValue(e as SimpleModel)).toList());
+          } else {
+            value.add(Convert.getModelValue(filterValue as SimpleModel));
+          }
+        } else if (rawType == CustomValue) {
+          if (filterValue is List) {
+            List customValueList = [];
+            for (CustomValue customValue in filterValue) {
+              Object? mapValue = customValue.toMap();
+              if (null == mapValue) {
+                continue;
+              }
+              customValueList.add(mapValue);
+            }
+            value.add(customValueList);
+          } else {
+            Object? mapValue = (filterValue as CustomValue).toMap();
+            if (null == mapValue) {
+              continue;
+            }
+            value.add(mapValue);
+          }
         }
       }
     }
@@ -48,12 +68,12 @@ class SingleFilterValue implements FilterValue {
       "field": filter.field,
       "op": filter.op.symbol,
       "value": value,
-      "valueType": filter.valueType,
+      "valueType": filter.valueType.toString(),
     };
   }
 
   @override
-  void fromMap(Object value) async {
+  Future<void> fromMap(Object value) async {
     if (value is! Map) {
       return;
     }
@@ -82,7 +102,8 @@ class SingleFilterValue implements FilterValue {
         if (rawType == DataModel) {
           DataDao dao = DaoCache.getStr(valueType);
           if (mapValue is List) {
-            filter.appendList(await dao.findByIDList(mapValue as List<String>));
+            List<String> idList = mapValue.map((e) => e.toString()).toList();
+            filter.appendList(await dao.findByIDList(idList));
           } else {
             Object? result = await dao.findByID(mapValue as String);
             if (null != result) {
@@ -109,13 +130,13 @@ class SingleFilterValue implements FilterValue {
             List<CustomValue> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
               CustomValue customValue = ConstructorCache.getStr(valueType);
-              customValue.fromMap(oneMapValue);
+              await customValue.fromMap(oneMapValue);
               oneValueAsList.add(customValue);
             }
             filter.appendList(oneValueAsList);
           } else {
             CustomValue customValue = ConstructorCache.getStr(valueType);
-            customValue.fromMap(mapValue);
+            await customValue.fromMap(mapValue);
             filter.append(customValue);
           }
         }
@@ -192,19 +213,19 @@ class GroupFilterValue implements FilterValue {
   }
 
   @override
-  void fromMap(Object value) {
+  Future<void> fromMap(Object value) async {
     if (value is! Map) {
       return;
     }
     String opSymbol = value["op"];
     op = GroupFilterOp.map[opSymbol]!;
-    List<Map> children = value["children"];
+    List children = value["children"];
     filters.clear();
     for (Map child in children) {
       String type = child["type"];
       Map value = child["value"] as Map;
       FilterValue customValue = ConstructorCache.getStr(type);
-      customValue.fromMap(value);
+      await customValue.fromMap(value);
       filters.add(customValue);
     }
   }

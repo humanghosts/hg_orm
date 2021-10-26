@@ -124,7 +124,9 @@ class SingleFilter extends Filter {
   @override
   SingleFilter clone() {
     SingleFilter newSingleFilter = SingleFilter(field: field, op: op);
-    newSingleFilter.value.addAll(value);
+    // TODO 这是浅克隆
+    newSingleFilter._value.addAll(value);
+    newSingleFilter._valueType = _valueType;
     return newSingleFilter;
   }
 

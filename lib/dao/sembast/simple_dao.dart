@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:sembast/sembast.dart';
@@ -72,10 +74,14 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
 
   @override
   Future<List<T>> find({hg.Filter? filter, List<hg.Sort>? sorts}) async {
-    T? t = await store.record(_storeName).get(dataBase);
-    if (null == t) {
+    Object? value = await store.record(_storeName).get(dataBase);
+    if (null == value) {
       return [];
     }
+    Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
+    T t = ConstructorCache.get(T);
+    await _convert.setModel(t, map);
+    t.state = States.query;
     return [t];
   }
 

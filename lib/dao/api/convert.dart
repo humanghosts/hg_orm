@@ -116,17 +116,17 @@ abstract class Convert {
     if (attribute is ModelAttribute) {
       if (attribute is DataModelAttribute) {
         Dao<Model> dao = DaoCache.get(attribute.type);
-        attribute.value = await dao.findByID(value as String) as DataModel?;
+        attribute.valueTypeless = await dao.findByID(value as String) as DataModel?;
       } else if (attribute is SimpleModelAttribute) {
-        attribute.value = await setModelValue(ConstructorCache.get(attribute.type), value) as SimpleModel;
+        attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value) as SimpleModel;
       } else {
-        attribute.value = await setModelValue(ConstructorCache.get(attribute.type), value);
+        attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value);
       }
     }
     // 自定义属性
     else if (attribute is CustomAttribute) {
       if (attribute.isNull) {
-        attribute.value = ConstructorCache.get(attribute.type);
+        attribute.valueTypeless = ConstructorCache.get(attribute.type);
       }
       await attribute.value!.fromMap(value);
     }
@@ -171,11 +171,11 @@ abstract class Convert {
       }
       // 时间列表属性
       else if (attribute is DateTimeListAttribute) {
-        attribute.value = listValue.map((e) => DateTime.fromMillisecondsSinceEpoch(e as int)).toList();
+        attribute.valueTypeless = listValue.map((e) => DateTime.fromMillisecondsSinceEpoch(e as int)).toList();
       }
       // 其它列表属性
       else {
-        attribute.value = listValue;
+        attribute.valueTypeless = listValue;
       }
     }
 
@@ -183,9 +183,9 @@ abstract class Convert {
     else {
       Type type = attribute.type;
       if (type == DateTime || type.toString() == "DateTime?") {
-        attribute.value = DateTime.fromMillisecondsSinceEpoch(value as int);
+        attribute.valueTypeless = DateTime.fromMillisecondsSinceEpoch(value as int);
       } else {
-        attribute.value = value;
+        attribute.valueTypeless = value;
       }
     }
     return attribute;

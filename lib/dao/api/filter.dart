@@ -138,12 +138,14 @@ class SingleFilter extends Filter {
 
 class GroupFilter extends Filter {
   GroupFilterOp op;
-  List<Filter> children;
+  late List<Filter> children;
 
   GroupFilter({
     this.op = GroupFilterOp.and,
-    this.children = const [],
-  });
+    List<Filter>? children,
+  }) {
+    this.children = children ?? [];
+  }
 
   GroupFilter.and(this.children) : op = GroupFilterOp.and;
 

@@ -160,7 +160,6 @@ class GroupFilter extends Filter {
     return newGroupFilter;
   }
 
-  /// TODO test
   @override
   String toString() {
     if (children.isEmpty) {

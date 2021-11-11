@@ -38,9 +38,9 @@ class SingleFilterValue implements FilterValue {
           }
         } else if (rawType == SimpleModel) {
           if (filterValue is List) {
-            value.add(filterValue.map((e) => Convert.getModelValue(e as SimpleModel)).toList());
+            value.add(filterValue.map((e) => Convertor.getModelValue(e as SimpleModel)).toList());
           } else {
-            value.add(Convert.getModelValue(filterValue as SimpleModel));
+            value.add(Convertor.getModelValue(filterValue as SimpleModel));
           }
         } else if (rawType == CustomValue) {
           if (filterValue is List) {
@@ -117,11 +117,11 @@ class SingleFilterValue implements FilterValue {
           if (mapValue is List) {
             List<SimpleModel> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
-              oneValueAsList.add(await Convert.setModelValue(ConstructorCache.getStr(valueType), oneMapValue) as SimpleModel);
+              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getStr(valueType), oneMapValue) as SimpleModel);
             }
             filter.appendList(oneValueAsList);
           } else {
-            filter.append(await Convert.setModelValue(ConstructorCache.getStr(valueType), mapValue) as SimpleModel);
+            filter.append(await Convertor.setModelValue(ConstructorCache.getStr(valueType), mapValue) as SimpleModel);
           }
         }
         // 自定义值类型
@@ -172,6 +172,14 @@ class SingleFilterValue implements FilterValue {
   @override
   SingleFilter? asFilter() {
     return filter;
+  }
+
+  @override
+  String toString() {
+    if (null == filter) {
+      return "";
+    }
+    return filter.toString();
   }
 }
 
@@ -250,5 +258,19 @@ class GroupFilterValue implements FilterValue {
       }
     }
     return groupFilter;
+  }
+
+  @override
+  String toString() {
+    if (filters.isEmpty) {
+      return "${op.title}:[]";
+    }
+    StringBuffer sb = StringBuffer();
+    sb.writeln("${op.title}:[");
+    for (var child in filters) {
+      sb.writeln("  ${child.toString()},");
+    }
+    sb.write("]");
+    return sb.toString();
   }
 }

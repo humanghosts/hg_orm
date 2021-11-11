@@ -43,4 +43,9 @@ class SortValue implements CustomValue {
     }
     return sortValue;
   }
+
+  @override
+  String toString() {
+    return sort.toString();
+  }
 }

@@ -5,7 +5,7 @@ import 'package:hg_orm/dao/api/dao.dart';
 import 'filter.dart';
 import 'sort.dart';
 
-abstract class Convert {
+abstract class Convertor {
   /// api的通用型filter转换为仓库特性过滤
   Object filterConvert(Filter filter);
 

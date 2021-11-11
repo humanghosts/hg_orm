@@ -3,7 +3,7 @@ import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:sembast/sembast.dart';
 
 @immutable
-class SembastConvert extends hg.Convert {
+class SembastConvertor extends hg.Convertor {
   @override
   Filter filterConvert(hg.Filter filter) {
     if (filter is hg.SingleFilter) {

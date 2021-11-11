@@ -8,7 +8,10 @@ class DaoCache {
   static final Map<String, Dao> _cache = {};
 
   static void put<T extends Dao>(Type type, T dao) {
-    _cache["$type"] = dao;
+    String typeStr = "$type";
+    String typeStrNullable = "$type?";
+    _cache[typeStr] = dao;
+    _cache[typeStrNullable] = dao;
   }
 
   static T get<T extends Dao>(Type type) {

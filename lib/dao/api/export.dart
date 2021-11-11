@@ -1,4 +1,4 @@
-export 'package:hg_orm/dao/api/convert.dart';
+export 'package:hg_orm/dao/api/convertor.dart';
 export 'package:hg_orm/dao/api/dao.dart';
 export 'package:hg_orm/dao/api/database_helper.dart';
 export 'package:hg_orm/dao/api/filter.dart';

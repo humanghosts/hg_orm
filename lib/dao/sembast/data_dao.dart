@@ -5,7 +5,7 @@ import 'dart:developer';
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/context/cache.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
-import 'package:hg_orm/dao/sembast/convert.dart';
+import 'package:hg_orm/dao/sembast/convertor.dart';
 import 'package:hg_orm/dao/sembast/database_helper.dart';
 import 'package:sembast/sembast.dart';
 
@@ -25,7 +25,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
   late final bool _logicDelete;
 
   /// 类型转换
-  late final SembastConvert _convert;
+  late final SembastConvertor _convertor;
 
   /// 是否使用缓存
   late final bool _cache;
@@ -35,7 +35,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     _sampleModel = ConstructorCache.get(T) as T;
     store = stringMapStoreFactory.store(T.toString());
     dataBase = SembastDatabaseHelper.database;
-    _convert = SembastConvert();
+    _convertor = SembastConvertor();
     _cache = cache ?? SembastDatabaseHelper.dataModelCache;
   }
 
@@ -70,7 +70,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     _log(model, action, "开始");
     model.createTime.value = DateTime.now();
     model.timestamp.value = DateTime.now();
-    await store.record(model.id.value).add(tx ?? dataBase, _convert.modelValue(model));
+    await store.record(model.id.value).add(tx ?? dataBase, _convertor.modelValue(model));
     _log(model, action, "存储成功");
     DataModelCache.put(model);
     _log(model, action, "缓存成功，结束");
@@ -80,7 +80,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     String action = "更新";
     _log(model, action, "开始");
     model.timestamp.value = DateTime.now();
-    await store.record(model.id.value).update(tx ?? dataBase, _convert.modelValue(model));
+    await store.record(model.id.value).update(tx ?? dataBase, _convertor.modelValue(model));
     _log(model, action, "存储成功");
     DataModelCache.put(model);
     _log(model, action, "缓存更新成功，结束");
@@ -93,7 +93,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
       _log(model, action, "开始");
       model.isDelete.value = true;
       model.deleteTime.value = DateTime.now();
-      await store.record(model.id.value).update(tx ?? dataBase, _convert.modelValue(model));
+      await store.record(model.id.value).update(tx ?? dataBase, _convertor.modelValue(model));
       _log(model, action, "存储成功");
       DataModelCache.remove(model.id.value);
       _log(model, action, "缓存移除成功，结束");
@@ -203,8 +203,8 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     _log(null, action, "开始");
     hg.Filter? logicFilter = _getLogicFilter(filter);
     Finder finder = Finder(
-      filter: logicFilter == null ? null : _convert.filterConvert(logicFilter),
-      sortOrders: sorts?.map((sort) => _convert.sortConvert(sort)).toList(),
+      filter: logicFilter == null ? null : _convertor.filterConvert(logicFilter),
+      sortOrders: sorts?.map((sort) => _convertor.sortConvert(sort)).toList(),
       limit: limit,
       offset: offset,
       start: start,
@@ -257,8 +257,8 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     _log(null, action, "开始");
     hg.Filter? logicFilter = _getLogicFilter(filter);
     Finder finder = Finder(
-      filter: logicFilter == null ? null : _convert.filterConvert(logicFilter),
-      sortOrders: sorts?.map((sort) => _convert.sortConvert(sort)).toList(),
+      filter: logicFilter == null ? null : _convertor.filterConvert(logicFilter),
+      sortOrders: sorts?.map((sort) => _convertor.sortConvert(sort)).toList(),
       limit: limit,
       offset: offset,
       start: start,
@@ -280,7 +280,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     String action = "计数";
     _log(null, action, "开始");
     hg.Filter? logicFilter = _getLogicFilter(filter);
-    int num = await store.count(dataBase, filter: logicFilter == null ? null : _convert.filterConvert(logicFilter));
+    int num = await store.count(dataBase, filter: logicFilter == null ? null : _convertor.filterConvert(logicFilter));
     _log(null, action, "读取成功，结束");
     return num;
   }
@@ -330,7 +330,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
       return resultList;
     }
     // 填充数据
-    List<T> fillList = await _fill(mapList, useCache);
+    List<T> fillList = await _convert(mapList, useCache);
     _log(null, action, "填充完成");
     // 收集填充后的数据
     resultList.addAll(fillList);
@@ -343,28 +343,30 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
   }
 
   /// 填充数据
-  Future<List<T>> _fill(List<Map<String, Object?>> mapList, [bool? cache]) async {
+  Future<List<T>> _convert(List<Map<String, Object?>> mapList, [bool? cache]) async {
     String action = "填充";
     bool useCache = cache ?? _cache;
-    // 获取模型属性列表
-    List<Attribute> attributeList = sampleModel.attributes.list;
 
-    // 遍历属性列表
-    for (var attr in attributeList) {
-      // 判断属性是否需要填充
-      if (!fillFilter(attr, useCache)) continue;
-      _log(null, action, "属性:${attr.title}开始");
-      // 扩展扩充
-      await fillExtend(attr, mapList, useCache);
-      _log(null, action, "属性:${attr.title}完成");
-    }
-    // 返回转换后的数据
+    // 由于有了_convert，并且dataModel缓存 这部分已经不需要了
+    // // 获取模型属性列表
+    // List<Attribute> attributeList = sampleModel.attributes.list;
+    // // 遍历属性列表
+    // for (var attr in attributeList) {
+    //   // 判断属性是否需要填充
+    //   if (!fillFilter(attr, useCache)) continue;
+    //   _log(null, action, "属性:${attr.title}开始");
+    //   // 扩展扩充
+    //   await fillExtend(attr, mapList, useCache);
+    //   _log(null, action, "属性:${attr.title}完成");
+    // }
+    // // 返回转换后的数据
+
     List<T> modelList = [];
     for (var map in mapList) {
       String id = map[sampleModel.id.name] as String;
       // 在merge中，fill之前，已经将mode放入undone缓存中，这里直接取即可
       DataModelCacheNode<T> cacheNode = DataModelCache.get(id)!;
-      await _convert.setModel(cacheNode.model, map) as T;
+      await _convertor.setModel(cacheNode.model, map) as T;
       // 转换完成的model缓存升级
       if (useCache) DataModelCache.levelUp(id);
       // 放入数据收集中

@@ -9,7 +9,8 @@ abstract class DatabaseHelper {
 
   DatabaseHelper(this.listener);
 
-  /// Type must use ModelType
+  /// Type 必须是 ModelType
+  /// 需要处理好constructor的依赖顺序，保证被依赖的先注册，因为构造方法中可能含有取值操作
   Future<void> initial({
     Map<Type, Object Function([Map<String, dynamic>? args])> Function()? getConstructorMap,
     Map<Type, Dao> Function()? getDaoMap,

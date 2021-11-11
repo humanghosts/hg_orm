@@ -4,7 +4,7 @@ import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/dao/api/export.dart' as hg;
 import 'package:sembast/sembast.dart';
 
-import 'convert.dart';
+import 'convertor.dart';
 import 'database_helper.dart';
 
 /// 公共的规范与实现
@@ -16,7 +16,7 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
   late Database dataBase;
 
   /// 类型转换
-  late final SembastConvert _convert;
+  late final SembastConvertor _convert;
 
   /// 存储库名称
   late final String _storeName;
@@ -28,7 +28,7 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
     _storeName = T.toString();
     store = stringMapStoreFactory.store("simple");
     dataBase = SembastDatabaseHelper.database;
-    _convert = SembastConvert();
+    _convert = SembastConvertor();
     _sampleModel = ConstructorCache.get(T) as T;
   }
 

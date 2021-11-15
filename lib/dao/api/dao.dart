@@ -11,4 +11,8 @@ abstract class Dao<T extends Model> {
   Future<T?> findByID(String id);
 
   Future<int> count({Filter? filter});
+
+  Future<void> recover(T model);
+
+  Future<void> recoverById(String id);
 }

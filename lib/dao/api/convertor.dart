@@ -39,9 +39,6 @@ abstract class Convertor {
       if (null == value) {
         continue;
       }
-      if (model is DataTreeModel && model.children == attribute) {
-        continue;
-      }
       map[attribute.name] = value;
     }
     return map;

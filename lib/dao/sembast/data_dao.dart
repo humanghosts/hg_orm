@@ -132,7 +132,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     await save(model, tx);
   }
 
-  /// 逻辑移除
+  /// 移除
   Future<void> removeList(List<T> modelList, {Transaction? tx}) async {
     if (modelList.isEmpty) {
       return;
@@ -148,6 +148,55 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     } else {
       await dataBase.transaction(listRemove);
     }
+  }
+
+  @override
+  Future<void> recover(T model, [Transaction? tx]) async {
+    String action = "恢复";
+    _log(model, action, "开始");
+    if (model.isDelete.value == false) {
+      _log(model, action, "未逻辑删除，无需恢复");
+    }
+    model.isDelete.value = false;
+    model.deleteTime.value = null;
+    await store.record(model.id.value).update(tx ?? dataBase, _convertor.modelValue(model));
+    DataModelCache.put(model);
+    _log(model, action, "缓存恢复成功，结束");
+  }
+
+  Future<void> recoverList(List<T> modelList, {Transaction? tx}) async {
+    if (modelList.isEmpty) {
+      return;
+    }
+    FutureOr<dynamic> listRecover(Transaction transaction) async {
+      for (T model in modelList) {
+        await recover(model, tx);
+      }
+    }
+
+    if (null != tx) {
+      await listRecover(tx);
+    } else {
+      await dataBase.transaction(listRecover);
+    }
+  }
+
+  @override
+  Future<void> recoverById(String id, [Transaction? tx]) async {
+    String action = "恢复";
+    List<RecordSnapshot> record = await store.find(dataBase,
+        finder: Finder(
+          filter: Filter.byKey(id),
+        ));
+    _log(null, action, "读取$id成功");
+    List<T> modelList = await _merge(record);
+    if (modelList.isEmpty) {
+      _log(null, action, "未找到需要恢复的数据，结束");
+      return;
+    }
+    _log(null, action, "翻译成功，结束");
+    await recover(modelList[0]);
+    return;
   }
 
   /// 获取逻辑删除条件
@@ -325,16 +374,14 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
       resultList.add(cacheModel);
       _log(cacheModel, action, "$cacheModel从${cacheNode.cacheType}缓存中读取");
     }
-    if (mapList.isEmpty) {
-      _log(null, action, "无需填充，结束");
-      return resultList;
+    if (mapList.isNotEmpty) {
+      // 填充数据
+      List<T> fillList = await _convert(mapList, useCache);
+      _log(null, action, "填充完成");
+      // 收集填充后的数据
+      resultList.addAll(fillList);
+      _log(null, action, "修改model状态");
     }
-    // 填充数据
-    List<T> fillList = await _convert(mapList, useCache);
-    _log(null, action, "填充完成");
-    // 收集填充后的数据
-    resultList.addAll(fillList);
-    _log(null, action, "修改model状态");
     for (T model in resultList) {
       model.state = States.query;
     }
@@ -346,21 +393,6 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
   Future<List<T>> _convert(List<Map<String, Object?>> mapList, [bool? cache]) async {
     String action = "填充";
     bool useCache = cache ?? _cache;
-
-    // 由于有了_convert，并且dataModel缓存 这部分已经不需要了
-    // // 获取模型属性列表
-    // List<Attribute> attributeList = sampleModel.attributes.list;
-    // // 遍历属性列表
-    // for (var attr in attributeList) {
-    //   // 判断属性是否需要填充
-    //   if (!fillFilter(attr, useCache)) continue;
-    //   _log(null, action, "属性:${attr.title}开始");
-    //   // 扩展扩充
-    //   await fillExtend(attr, mapList, useCache);
-    //   _log(null, action, "属性:${attr.title}完成");
-    // }
-    // // 返回转换后的数据
-
     List<T> modelList = [];
     for (var map in mapList) {
       String id = map[sampleModel.id.name] as String;
@@ -374,93 +406,7 @@ abstract class DataDao<T extends DataModel> implements hg.Dao<T> {
     }
     _log(null, action, "类型转换完成");
     // 填充后操作
-    await afterFill(modelList);
     _log(null, action, "填充后操作执行完成，结束");
     return modelList;
   }
-
-  /// 过滤是否填充 子类可覆写或调用
-  bool fillFilter(Attribute attr, [bool? cache]) {
-    return true;
-  }
-
-  /// 填充扩展字段 子类可覆写或调用
-  Future<void> fillExtend(Attribute attr, List<Map<String, dynamic>> mapList, [bool? cache]) async {
-    // 填充引用类型的数据
-    await fillDataModel(attr, mapList, cache);
-  }
-
-  /// 填充BaseModel类型的数据 子类可覆写或调用
-  Future<void> fillDataModel(Attribute attr, List<Map<String, dynamic>> mapList, [bool? cache]) async {
-    String action = "数据模型填充";
-    bool useCache = cache ?? _cache;
-    // 属性名称
-    String attrName = attr.name;
-    // 不是DataModelAttribute类型的不填充
-    if (attr is! DataModelAttribute && attr is! DataModelListAttribute) {
-      _log(null, action, "${attr.name}非DataModel类型属性，结束");
-      return;
-    }
-    // 收集主键集合，用于一次查询
-    Set attrIdSet = {};
-    // 遍历数据，收集主键
-    for (Map<String, Object?> map in mapList) {
-      // 数据为空 不处理
-      if (null == map[attrName]) continue;
-      // 集合类型的
-      if (attr is DataModelListAttribute) {
-        List idList = map[attrName] as List;
-        for (String id in idList) {
-          attrIdSet.add(id);
-        }
-      }
-      // 普通类型的
-      else {
-        attrIdSet.add(map[attrName]);
-      }
-    }
-    // 主键为空不处理
-    if (attrIdSet.isEmpty) {
-      _log(null, action, "${attr.name}无引用数据模型，结束");
-      return;
-    }
-    // 属性类型
-    Type attrType = attr.type;
-    // 获取对应的dao
-    DataDao dao = DaoCache.get(attrType);
-    // 查询关联数据
-    List<DataModel> refModelList = await dao.findByIDList(attrIdSet.toList(), useCache);
-    _log(null, action, "${attr.name}查询完成");
-    // 将关联数据转换为id数据映射
-    Map<String, Model> idModelMap = {};
-    if (refModelList.isNotEmpty) {
-      for (DataModel refModel in refModelList) {
-        idModelMap[refModel.id.value] = refModel;
-      }
-    }
-    // 再次遍历数据，将id替换为完整数据
-    for (Map<String, Object?> map in mapList) {
-      // 原始value
-      Object? oldValue = map[attrName];
-      if (null == oldValue) continue;
-      if (attr is DataModelListAttribute) {
-        List refValueList = [];
-        for (Object e in (oldValue as List)) {
-          Model? model = idModelMap[e];
-          // 没找到 当这个数据已经被删除了，这里惰性删除依赖
-          if (null == model) continue;
-          refValueList.add(model);
-        }
-        // 替换原始值
-        map[attrName] = refValueList;
-      } else {
-        // 替换原始值，依赖被删除的话，这里是null，也会替换，惰性删除依赖
-        map[attrName] = idModelMap[oldValue];
-      }
-    }
-    _log(null, action, "${attr.name}回写完成");
-  }
-
-  /// 填充后处理 子类可覆写
-  Future<void> afterFill(List<T> modelList, [bool? cache]) async {}
 }

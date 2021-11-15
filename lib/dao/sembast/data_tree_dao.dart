@@ -5,46 +5,62 @@ import 'package:sembast/sembast.dart';
 
 /// 树形公共的规范与实现
 abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
-  /// 插入
-  /// TODO 效率问题
   @override
   Future<void> save(T model, [Transaction? tx]) async {
     // 子节点
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
-      for (DataTreeModel child in model.children.value) {
+      for (DataModel child in model.children.value) {
         children.add(child as T);
       }
     }
-    // 保存子节点
-    children = await saveList(children, tx);
-    // 保存当前节点
-    await super.save(model, tx);
+    if (null == tx) {
+      await dataBase.transaction((transaction) async {
+        children = await saveList(children, transaction);
+        await super.save(model, transaction);
+      });
+    } else {
+      children = await saveList(children, tx);
+      await super.save(model, tx);
+    }
   }
 
-  /// 移除
   @override
   Future<void> remove(T model, [Transaction? tx, bool isRemoveChildren = true]) async {
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
-      for (DataTreeModel child in model.children.value) {
+      for (DataModel child in model.children.value) {
         children.add(child as T);
       }
     }
-    // 子节点
-    if (isRemoveChildren) {
-      // 删除子节点
-      await removeList(children, tx: tx);
+    if (null == tx) {
+      await dataBase.transaction((transaction) async {
+        if (isRemoveChildren) await removeList(children, tx: transaction);
+        await super.remove(model, transaction);
+      });
+    } else {
+      if (isRemoveChildren) await removeList(children, tx: tx);
+      await super.remove(model, tx);
     }
-    await super.remove(model);
   }
 
   @override
-  bool fillFilter(Attribute attr, [bool? cache]) {
-    if (sampleModel.parent.name == attr.name) {
-      return false;
+  Future<void> recover(T model, [Transaction? tx]) async {
+    List<T> children = <T>[];
+    if (model.children.value.isNotEmpty) {
+      for (DataModel child in model.children.value) {
+        children.add(child as T);
+      }
     }
-    return true;
+    if (null == tx) {
+      await dataBase.transaction((transaction) async {
+        await recoverList(children, tx: transaction);
+        await super.recover(model, transaction);
+      });
+    } else {
+      await recoverList(children, tx: tx);
+      await super.recover(model, tx);
+    }
   }
 
   /// 按树查找
@@ -69,76 +85,29 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
     );
     if (modelList.isEmpty) return modelList;
 
-    // 组装树
+    // fullPath:Model
     Map<String, T> modelMap = {};
+    List<String> fullPathList = [];
     for (T model in modelList) {
-      modelMap[model.id.value] = model;
+      modelMap[model.fullPath.value] = model;
+      fullPathList.add(model.fullPath.value);
     }
-    List<T> rootList = [];
-    for (T node in modelList) {
-      DataTreeModel? parent = node.parent.value;
-      // 没有上级，说明是根节点
-      if (null == parent) {
-        rootList.add(node);
-        continue;
+    // 按照长度排序
+    fullPathList.sort((a, b) => a.length.compareTo(b.length));
+    // 如果某个节点的上级在，这个节点不应该存在，无论是否为直接上级
+    modelMap.removeWhere((key, value) {
+      for (String fullPath in fullPathList) {
+        if (key.length <= fullPath.length) {
+          break;
+        }
+        if (key.contains(fullPath + "|")) {
+          fullPathList.remove(key);
+          return true;
+        }
       }
-      // 处理非根节点
-      String parentId = parent.id.value;
-      DataTreeModel? parentModel = modelMap[parentId];
-      // 缓存没有，说明这个节点的上级没有被查回来，当前节点也应该是根节点
-      if (null == parentModel) {
-        rootList.add(node);
-        continue;
-      }
-      node.parent.value = parentModel;
-    }
-    // 填返回根节点
-    return rootList;
-  }
-
-  /// 查找下级
-  Future<List<T>> findChildrenByFullPath(Set<String> fullPathSet) async {
-    List<Filter> filters = fullPathSet.map((fullPath) {
-      return Filter.matches(sampleModel.fullPath.name, "^(${fullPath.replaceAll("|", "\\|")}\\|)[0-9a-zA-Z|]+\$");
-    }).toList();
-    return await nativeFind(filter: Filter.or(filters));
-  }
-
-  /// 查找直接下级
-  Future<Map<String, List<T>>> findChildrenByIdSet(Set<String> parentId) async {
-    List<T> children = await nativeFind(filter: Filter.inList(sampleModel.parent.name, parentId.toList()));
-    Map<String, List<T>> childrenMap = {};
-    for (T child in children) {
-      String parentId = (child.parent.value!.id.value);
-      if (childrenMap.containsKey(parentId)) {
-        childrenMap[parentId]!.add(child);
-      } else {
-        childrenMap[parentId] = [child];
-      }
-    }
-    return childrenMap;
-  }
-
-  /// 填充下级
-  Future<void> fillChildren(List<T> modelList) async {
-    Map<String, T> idModelMap = {};
-    for (T model in modelList) {
-      String id = model.id.value;
-      idModelMap[id] = model;
-    }
-    // 查询直接下级
-    Map<String, List<T>> childrenMap = await findChildrenByIdSet(Set.from(idModelMap.keys));
-    if (childrenMap.isEmpty) {
-      return;
-    }
-    childrenMap.forEach((parentId, children) {
-      T parent = idModelMap[parentId]!;
-      parent.children.value = children;
+      return false;
     });
-  }
-
-  /// 查询根节点
-  Future<List<T>> findRoot({bool isOrder = true}) async {
-    return await nativeFind(filter: Filter.matchesRegExp(sampleModel.fullPath.name, RegExp("^[0-9A-Za-z]{4}\$")));
+    // 填返回根节点
+    return modelMap.values.toList();
   }
 }

@@ -1,39 +1,31 @@
 import 'dart:convert';
 
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/dao/api/export.dart' as hg;
+import 'package:hg_orm/dao/api/export.dart';
 import 'package:sembast/sembast.dart';
 
 import 'convertor.dart';
 import 'database_helper.dart';
 
 /// 公共的规范与实现
-abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
+class SembastSimpleDao<T extends SimpleModel> extends SimpleDao<T> {
   /// 获取实体所在存储库的名称
   late StoreRef store;
 
   /// 获取数据库实例
   late Database dataBase;
 
-  /// 类型转换
-  late final SembastConvertor _convert;
+  /// 数据库地址
+  late String _storeName;
 
-  /// 存储库名称
-  late final String _storeName;
-
-  /// 实体例
-  late final T _sampleModel;
-
-  SimpleDao() {
+  SembastSimpleDao() : super(convertor: const SembastConvertor()) {
     _storeName = T.toString();
     store = stringMapStoreFactory.store("simple");
     dataBase = SembastDatabaseHelper.database;
-    _convert = SembastConvertor();
-    _sampleModel = ConstructorCache.get(T) as T;
   }
 
-  /// Dao处理的实体的样本，用于获取属性等字段
-  T get sampleModel => _sampleModel;
+  @override
+  SembastConvertor get convertor => super.convertor as SembastConvertor;
 
   /// 保存，存在更新，不存在插入
   @override
@@ -55,11 +47,14 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
   }
 
   Future<void> _insert(T model, [Transaction? tx]) async {
-    await store.record(_storeName).add(tx ?? dataBase, _convert.modelValue(model));
+    await store.record(_storeName).add(tx ?? dataBase, convertor.modelConvert(model));
   }
 
   Future<void> _update(T model, [Transaction? tx]) async {
-    await store.record(_storeName).update(tx ?? dataBase, _convert.modelValue(model));
+    /// 这里用put不用update的原因是：
+    /// sembast的update是foreach map的update，如果以前有key，现在没有key，
+    /// 无法清空数据，所以就直接替换了
+    await store.record(_storeName).put(tx ?? dataBase, convertor.modelConvert(model));
   }
 
   Future<void> _delete(T model, [Transaction? tx]) async {
@@ -73,35 +68,15 @@ abstract class SimpleDao<T extends SimpleModel> implements hg.Dao<T> {
   }
 
   @override
-  Future<List<T>> find({hg.Filter? filter, List<hg.Sort>? sorts}) async {
+  Future<List<T>> find() async {
     Object? value = await store.record(_storeName).get(dataBase);
     if (null == value) {
       return [];
     }
     Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
     T t = ConstructorCache.get(T);
-    await _convert.setModel(t, map);
+    await convertor.convertToModel(t, map);
     t.state = States.query;
     return [t];
   }
-
-  @override
-  Future<T?> findByID(String id) async {
-    List<T> list = await find();
-    if (list.isEmpty) {
-      return null;
-    }
-    return list[0];
-  }
-
-  @override
-  Future<int> count({hg.Filter? filter}) async {
-    return await store.count(dataBase);
-  }
-
-  @override
-  Future<void> recover(T model) async {}
-
-  @override
-  Future<void> recoverById(String id) async {}
 }

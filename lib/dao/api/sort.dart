@@ -1,9 +1,12 @@
-class Sort {
+/// 排序条件
+class HgSort {
+  /// 排序字段
   String field;
 
+  /// 排序操作符
   SortOp op;
 
-  Sort({required this.field, this.op = SortOp.asc});
+  HgSort({required this.field, this.op = SortOp.asc});
 
   @override
   String toString() {
@@ -11,6 +14,7 @@ class Sort {
   }
 }
 
+/// 排序操作符
 class SortOp {
   final String title;
   final String symbol;

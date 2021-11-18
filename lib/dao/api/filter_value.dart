@@ -1,48 +1,52 @@
-import 'package:hg_entity/attribute/attribute_custom.dart';
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/dao/api/filter.dart';
-import 'package:hg_orm/hg_orm.dart';
+import 'package:hg_orm/context/export.dart';
 
-abstract class FilterValue implements CustomValue {
-  Filter? asFilter();
+import 'convertor.dart';
+import 'dao.dart';
+import 'filter.dart';
+
+/// 过滤条件的custom_value类型，用于model的attribute的value
+abstract class HgFilterValue implements CustomValue {
+  HgFilter? asFilter();
 }
 
-class SingleFilterValue implements FilterValue {
-  SingleFilter? filter;
+/// 单个过滤条件
+class SingleHgFilterValue implements HgFilterValue {
+  SingleHgFilter? filter;
 
   @override
   bool get isNull => null == filter;
 
   @override
   void merge(CustomValue value) {
-    if (value is SingleFilterValue) {
+    if (value is SingleHgFilterValue) {
       filter = value.filter;
     }
   }
 
   @override
   Object? toMap() {
-    SingleFilter? filter = this.filter;
+    SingleHgFilter? filter = this.filter;
     if (null == filter) return null;
     List<Object> filterValueList = filter.value;
     List<Object> value = filterValueList;
     if (ConstructorCache.containsKey(filter.valueType)) {
-      Type rawType = ConstructorCache.getRawType(filter.valueType);
+      Object obj = ConstructorCache.get(filter.valueType);
       value = <Object>[];
       for (Object filterValue in filterValueList) {
-        if (rawType == DataModel) {
+        if (obj is DataModel) {
           if (filterValue is List) {
             value.add(filterValue.map((e) => (e as DataModel).id.value).toList());
           } else {
             value.add((filterValue as DataModel).id.value);
           }
-        } else if (rawType == SimpleModel) {
+        } else if (obj is SimpleModel) {
           if (filterValue is List) {
             value.add(filterValue.map((e) => Convertor.getModelValue(e as SimpleModel)).toList());
           } else {
             value.add(Convertor.getModelValue(filterValue as SimpleModel));
           }
-        } else if (rawType == CustomValue) {
+        } else if (obj is CustomValue) {
           if (filterValue is List) {
             List customValueList = [];
             for (CustomValue customValue in filterValue) {
@@ -83,7 +87,7 @@ class SingleFilterValue implements FilterValue {
     String opSymbol = value["op"];
     SingleFilterOp op = SingleFilterOp.map[opSymbol]!;
     // 过滤器
-    SingleFilter filter = SingleFilter(field: field, op: op);
+    SingleHgFilter filter = SingleHgFilter(field: field, op: op);
     this.filter = filter;
     // 值列表
     List mapValueList = value["value"];
@@ -95,12 +99,12 @@ class SingleFilterValue implements FilterValue {
     // 实体类型
     if (ConstructorCache.containsKeyStr(valueType)) {
       // 原始值类型
-      Type rawType = ConstructorCache.getRawTypeStr(valueType);
+      Object obj = ConstructorCache.getByStr(valueType);
       // 遍历所有值
       for (Object mapValue in mapValueList) {
         // 数据模型
-        if (rawType == DataModel) {
-          DataDao dao = DaoCache.getStr(valueType);
+        if (obj is DataModel) {
+          DataDao<DataModel> dao = DaoCache.getByStr(valueType) as DataDao<DataModel>;
           if (mapValue is List) {
             List<String> idList = mapValue.map((e) => e.toString()).toList();
             filter.appendList(await dao.findByIDList(idList));
@@ -113,29 +117,29 @@ class SingleFilterValue implements FilterValue {
           }
         }
         // 简单模型
-        else if (rawType == SimpleModel) {
+        else if (obj is SimpleModel) {
           if (mapValue is List) {
             List<SimpleModel> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
-              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getStr(valueType), oneMapValue) as SimpleModel);
+              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), oneMapValue) as SimpleModel);
             }
             filter.appendList(oneValueAsList);
           } else {
-            filter.append(await Convertor.setModelValue(ConstructorCache.getStr(valueType), mapValue) as SimpleModel);
+            filter.append(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), mapValue) as SimpleModel);
           }
         }
         // 自定义值类型
-        else if (rawType == CustomValue) {
+        else if (obj is CustomValue) {
           if (mapValue is List) {
             List<CustomValue> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
-              CustomValue customValue = ConstructorCache.getStr(valueType);
+              CustomValue customValue = ConstructorCache.getByStr(valueType);
               await customValue.fromMap(oneMapValue);
               oneValueAsList.add(customValue);
             }
             filter.appendList(oneValueAsList);
           } else {
-            CustomValue customValue = ConstructorCache.getStr(valueType);
+            CustomValue customValue = ConstructorCache.getByStr(valueType);
             await customValue.fromMap(mapValue);
             filter.append(customValue);
           }
@@ -163,14 +167,14 @@ class SingleFilterValue implements FilterValue {
   }
 
   @override
-  SingleFilterValue clone() {
-    SingleFilterValue newFilterValue = SingleFilterValue();
+  SingleHgFilterValue clone() {
+    SingleHgFilterValue newFilterValue = SingleHgFilterValue();
     newFilterValue.filter = filter?.clone();
     return newFilterValue;
   }
 
   @override
-  SingleFilter? asFilter() {
+  SingleHgFilter? asFilter() {
     return filter;
   }
 
@@ -183,16 +187,17 @@ class SingleFilterValue implements FilterValue {
   }
 }
 
-class GroupFilterValue implements FilterValue {
+/// 多个过滤条件
+class GroupHgFilterValue implements HgFilterValue {
   GroupFilterOp op = GroupFilterOp.and;
-  final List<FilterValue> filters = [];
+  final List<HgFilterValue> filters = [];
 
   @override
   bool get isNull => filters.isEmpty;
 
   @override
   void merge(CustomValue value) {
-    if (value is GroupFilterValue) {
+    if (value is GroupHgFilterValue) {
       op = value.op;
       filters.clear();
       filters.addAll(value.filters);
@@ -203,7 +208,7 @@ class GroupFilterValue implements FilterValue {
   Object? toMap() {
     if (filters.isEmpty) return null;
     List<Map> childrenMap = [];
-    for (FilterValue child in filters) {
+    for (HgFilterValue child in filters) {
       String type = child.runtimeType.toString();
       Object? value = child.toMap();
       if (value == null) {
@@ -232,27 +237,27 @@ class GroupFilterValue implements FilterValue {
     for (Map child in children) {
       String type = child["type"];
       Map value = child["value"] as Map;
-      FilterValue customValue = ConstructorCache.getStr(type);
+      HgFilterValue customValue = ConstructorCache.getByStr(type);
       await customValue.fromMap(value);
       filters.add(customValue);
     }
   }
 
   @override
-  GroupFilterValue clone() {
-    GroupFilterValue newFilterValue = GroupFilterValue();
+  GroupHgFilterValue clone() {
+    GroupHgFilterValue newFilterValue = GroupHgFilterValue();
     newFilterValue.op = op;
-    for (FilterValue filter in filters) {
-      newFilterValue.filters.add(filter.clone() as FilterValue);
+    for (HgFilterValue filter in filters) {
+      newFilterValue.filters.add(filter.clone() as HgFilterValue);
     }
     return newFilterValue;
   }
 
   @override
-  GroupFilter? asFilter() {
-    GroupFilter groupFilter = GroupFilter(op: op);
-    for (FilterValue child in filters) {
-      Filter? filter = child.asFilter();
+  GroupHgFilter? asFilter() {
+    GroupHgFilter groupFilter = GroupHgFilter(op: op);
+    for (HgFilterValue child in filters) {
+      HgFilter? filter = child.asFilter();
       if (null != filter) {
         groupFilter.children.add(filter);
       }

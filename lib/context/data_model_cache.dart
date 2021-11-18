@@ -1,39 +1,25 @@
 import 'package:flutter/cupertino.dart';
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/dao/api/dao.dart';
 
-class DaoCache {
-  DaoCache._();
-
-  static final Map<String, Dao> _cache = {};
-
-  static void put<T extends Dao>(Type type, T dao) {
-    String typeStr = "$type";
-    String typeStrNullable = "$type?";
-    _cache[typeStr] = dao;
-    _cache[typeStrNullable] = dao;
-  }
-
-  static T get<T extends Dao>(Type type) {
-    return getStr(type.toString());
-  }
-
-  static T getStr<T extends Dao>(String type) {
-    assert(_cache.containsKey(type), "register ${type.toString()}'s dao first");
-    return _cache[type] as T;
-  }
-}
-
+/// 数据模型的缓存节点，不可修改
+/// 包括缓存类型和缓存值
 @immutable
 class DataModelCacheNode<T> {
+  /// 数据模型缓存类型
   final DataModelCacheType cacheType;
+
+  /// 缓存值
   final T model;
 
   const DataModelCacheNode(this.cacheType, this.model);
 }
 
+/// 数据模型缓存类型的枚举
 enum DataModelCacheType {
+  /// 完成状态
   done,
+
+  /// 未完成状态
   undone,
 }
 
@@ -41,9 +27,13 @@ enum DataModelCacheType {
 class DataModelCache {
   DataModelCache._();
 
+  /// 完成状态的缓存池
   static final Map<String, DataModel> _doneCache = {};
+
+  /// 未完成状态的缓存池
   static final Map<String, DataModel> _undoneCache = {};
 
+  /// 添加缓存
   static void put<T extends DataModel>(T model, [DataModelCacheType cacheType = DataModelCacheType.done]) {
     String id = model.id.value;
     switch (cacheType) {
@@ -56,6 +46,7 @@ class DataModelCache {
     }
   }
 
+  /// 获取缓存
   static DataModelCacheNode<T>? get<T extends DataModel>(String id) {
     if (_doneCache.containsKey(id)) {
       return DataModelCacheNode(DataModelCacheType.done, _doneCache[id] as T);
@@ -66,17 +57,20 @@ class DataModelCache {
     return null;
   }
 
+  /// 移除缓存，会移除所有缓存池中的缓存
   static void remove(String id) {
     _doneCache.remove(id);
     _undoneCache.remove(id);
   }
 
+  /// 缓存状态提升
   static void levelUp(String id) {
     // 从高到低升级
     _doneLevelUp(id);
     _undoneLevelUp(id);
   }
 
+  /// 未完成状态提升
   static void _undoneLevelUp(String id) {
     if (!_undoneCache.containsKey(id)) {
       return;
@@ -86,5 +80,6 @@ class DataModelCache {
     _doneCache[id] = model;
   }
 
+  /// 完成状态提升
   static void _doneLevelUp(String id) {}
 }

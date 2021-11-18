@@ -1,46 +1,48 @@
 import 'package:flutter/cupertino.dart';
-import 'package:hg_orm/dao/api/export.dart' as hg;
+import 'package:hg_orm/dao/api/export.dart';
 import 'package:sembast/sembast.dart';
 
 @immutable
-class SembastConvertor extends hg.Convertor {
+class SembastConvertor extends Convertor {
+  const SembastConvertor();
+
   @override
-  Filter filterConvert(hg.Filter filter) {
-    if (filter is hg.SingleFilter) {
+  Filter filterConvert(HgFilter filter) {
+    if (filter is SingleHgFilter) {
       return convertSingleFilter(filter);
     } else {
-      return convertGroupFilter(filter as hg.GroupFilter);
+      return convertGroupFilter(filter as GroupHgFilter);
     }
   }
 
-  Filter convertSingleFilter(hg.SingleFilter filter) {
+  Filter convertSingleFilter(SingleHgFilter filter) {
     String field = filter.field;
-    hg.FilterOp op = filter.op;
+    FilterOp op = filter.op;
     List<Object> valueList = filter.value;
     switch (op) {
-      case hg.SingleFilterOp.equals:
+      case SingleFilterOp.equals:
         return Filter.equals(field, valueList[0]);
-      case hg.SingleFilterOp.notEquals:
+      case SingleFilterOp.notEquals:
         return Filter.notEquals(field, valueList[0]);
-      case hg.SingleFilterOp.isNull:
+      case SingleFilterOp.isNull:
         return Filter.isNull(field);
-      case hg.SingleFilterOp.notNull:
+      case SingleFilterOp.notNull:
         return Filter.notNull(field);
-      case hg.SingleFilterOp.lessThan:
+      case SingleFilterOp.lessThan:
         return Filter.lessThan(field, valueList[0]);
-      case hg.SingleFilterOp.lessThanOrEquals:
+      case SingleFilterOp.lessThanOrEquals:
         return Filter.lessThanOrEquals(field, valueList[0]);
-      case hg.SingleFilterOp.greaterThan:
+      case SingleFilterOp.greaterThan:
         return Filter.greaterThan(field, valueList[0]);
-      case hg.SingleFilterOp.greaterThanOrEquals:
+      case SingleFilterOp.greaterThanOrEquals:
         return Filter.greaterThanOrEquals(field, valueList[0]);
-      case hg.SingleFilterOp.inList:
+      case SingleFilterOp.inList:
         return Filter.inList(field, valueList[0] as List);
-      case hg.SingleFilterOp.notInList:
+      case SingleFilterOp.notInList:
         return Filter.not(Filter.inList(field, valueList[0] as List));
-      case hg.SingleFilterOp.matches:
+      case SingleFilterOp.matches:
         return Filter.matches(field, valueList[0].toString());
-      case hg.SingleFilterOp.between:
+      case SingleFilterOp.between:
         return Filter.custom((RecordSnapshot record) {
           Map<String, Object?> map = record.value;
           if (!map.containsKey(field)) {
@@ -61,7 +63,7 @@ class SembastConvertor extends hg.Convertor {
           }
           return false;
         });
-      case hg.SingleFilterOp.containsAll:
+      case SingleFilterOp.containsAll:
         return Filter.custom((RecordSnapshot record) {
           Map<String, Object?> map = record.value;
           if (!map.containsKey(field)) {
@@ -76,7 +78,7 @@ class SembastConvertor extends hg.Convertor {
           }
           return true;
         });
-      case hg.SingleFilterOp.containsOne:
+      case SingleFilterOp.containsOne:
         return Filter.custom((RecordSnapshot record) {
           Map<String, Object?> map = record.value;
           if (!map.containsKey(field)) {
@@ -96,13 +98,13 @@ class SembastConvertor extends hg.Convertor {
     }
   }
 
-  Filter convertGroupFilter(hg.GroupFilter filter) {
-    List<hg.Filter> children = filter.children;
+  Filter convertGroupFilter(GroupHgFilter filter) {
+    List<HgFilter> children = filter.children;
     List<Filter> filters = [];
-    for (hg.Filter child in children) {
+    for (HgFilter child in children) {
       filters.add(filterConvert(child));
     }
-    if (filter.op == hg.GroupFilterOp.and) {
+    if (filter.op == GroupFilterOp.and) {
       return Filter.and(filters);
     } else {
       return Filter.or(filters);
@@ -110,7 +112,7 @@ class SembastConvertor extends hg.Convertor {
   }
 
   @override
-  SortOrder sortConvert(hg.Sort sort) {
-    return SortOrder(sort.field, sort.op == hg.SortOp.asc);
+  SortOrder sortConvert(HgSort sort) {
+    return SortOrder(sort.field, sort.op == SortOp.asc);
   }
 }

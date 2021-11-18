@@ -16,27 +16,15 @@ class SembastDatabaseHelper extends DatabaseHelper {
     return _database!;
   }
 
-  /// 数据库路径
-  final String path;
-
-  /// 数据模型是否缓存
-  static bool dataModelCache = true;
-
-  SembastDatabaseHelper({
-    required this.path,
-    DatabaseListener? listener,
-    dataModelCache = true,
-  }) : super(listener);
-
   /// 初始化数据库
   @override
-  Future<void> open() async {
+  Future<void> open(String path) async {
     // 获取app的路径 path_provider包下
     final appDocumentDir = await getApplicationDocumentsDirectory();
     // 获取全量数据库路径
     final fullPath = join(appDocumentDir.path, path);
     // 通过绝对路径打开数据库
     _database = await databaseFactoryIo.openDatabase(fullPath);
-    log("database open success!");
+    log("sembast database open success!");
   }
 }

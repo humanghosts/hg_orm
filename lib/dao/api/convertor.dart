@@ -1,37 +1,41 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/context/cache.dart';
+import 'package:hg_orm/context/export.dart';
 import 'package:hg_orm/dao/api/dao.dart';
 
 import 'filter.dart';
 import 'sort.dart';
 
+/// 负责将hg_orm和hg_entity转换为对应的数据库的数据
 abstract class Convertor {
-  /// api的通用型filter转换为仓库特性过滤
-  Object filterConvert(Filter filter);
+  const Convertor();
 
-  /// api的通用型sort转换为仓库特型排序
-  Object sortConvert(Sort sort);
+  /// filter转换为仓库特性过滤
+  Object filterConvert(HgFilter filter);
+
+  /// sort转换为仓库特型排序
+  Object sortConvert(HgSort sort);
 
   /// model转换为仓库的数据类型
-  Object modelValue(Model model) {
+  Object modelConvert(Model model) {
     return getModelValue(model);
   }
 
   /// 仓库的数据类型转换为model类型，最好保证model是新的
-  Future<Model> setModel(Model model, Object? value) async {
+  Future<Model> convertToModel(Model model, Object? value) async {
     return await setModelValue(model, value);
   }
 
   /// attribute的数据类型转换为仓库数据类型
-  Object? attributeValue(Attribute attribute) {
+  Object? attributeConvert(Attribute attribute) {
     return getAttributeValue(attribute);
   }
 
   /// 仓库的数据类型回设attribute的value,最好保证attribute是新的
-  Future<Attribute> setAttribute(Attribute attribute, Object? value) async {
+  Future<Attribute> convertToAttribute(Attribute attribute, Object? value) async {
     return await setAttributeValue(attribute, value);
   }
 
+  /// 供其它类使用的方法
   static Object getModelValue(Model model) {
     Map<String, Object> map = <String, Object>{};
     for (Attribute attribute in model.attributes.list) {
@@ -44,6 +48,7 @@ abstract class Convertor {
     return map;
   }
 
+  /// 供其它类使用的方法
   static Future<Model> setModelValue(Model model, Object? value) async {
     if (null == value) {
       return model;
@@ -58,6 +63,7 @@ abstract class Convertor {
     return model;
   }
 
+  /// 供其它类使用的方法
   static Object? getAttributeValue(Attribute attribute) {
     // 属性为空
     if (attribute.isNull) return null;
@@ -104,6 +110,7 @@ abstract class Convertor {
     }
   }
 
+  /// 供其它类使用的方法
   static Future<Attribute> setAttributeValue(Attribute attribute, Object? value) async {
     if (null == value) {
       attribute.clear();
@@ -112,8 +119,9 @@ abstract class Convertor {
     // 模型属性
     if (attribute is ModelAttribute) {
       if (attribute is DataModelAttribute) {
-        Dao<Model> dao = DaoCache.get(attribute.type);
-        attribute.valueTypeless = await dao.findByID(value as String) as DataModel?;
+        // 数据库查询
+        DataDao<DataModel> dao = DaoCache.getByType(attribute.type) as DataDao<DataModel>;
+        attribute.valueTypeless = await dao.findByID(value as String);
       } else if (attribute is SimpleModelAttribute) {
         attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value) as SimpleModel;
       } else {
@@ -134,10 +142,11 @@ abstract class Convertor {
       if (attribute is ModelListAttribute) {
         // 数据模型列表属性
         if (attribute is DataModelListAttribute) {
-          Dao<Model> dao = DaoCache.get(attribute.type);
+          // 数据库查询
+          DataDao<DataModel> dao = DaoCache.getByType(attribute.type) as DataDao<DataModel>;
           attribute.clear();
           for (Object obj in listValue) {
-            DataModel? model = await dao.findByID(obj as String) as DataModel?;
+            DataModel? model = await dao.findByID(obj as String);
             if (null == model) {
               continue;
             }

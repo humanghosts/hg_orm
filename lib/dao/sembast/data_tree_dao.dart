@@ -1,10 +1,14 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/dao/api/export.dart' as hg;
-import 'package:hg_orm/dao/sembast/data_dao.dart';
+import 'package:hg_orm/dao/api/export.dart';
+import 'package:hg_orm/dao/export.dart';
 import 'package:sembast/sembast.dart';
 
+import 'data_dao.dart';
+
 /// 树形公共的规范与实现
-abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
+class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> implements DataTreeDao<T> {
+  SembastDataTreeDao({bool? isLogicDelete, bool? isCache}) : super(isLogicDelete: isLogicDelete, isCache: isCache);
+
   @override
   Future<void> save(T model, [Transaction? tx]) async {
     // 子节点
@@ -16,11 +20,11 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
     }
     if (null == tx) {
       await dataBase.transaction((transaction) async {
-        children = await saveList(children, transaction);
+        await saveList(children, transaction);
         await super.save(model, transaction);
       });
     } else {
-      children = await saveList(children, tx);
+      await saveList(children, tx);
       await super.save(model, tx);
     }
   }
@@ -65,9 +69,10 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
 
   /// 按树查找
   /// 先全查回来，然后组装成树
+  @override
   Future<List<T>> findTree({
-    hg.Filter? filter,
-    List<hg.Sort>? sorts,
+    HgFilter? filter,
+    List<HgSort>? sorts,
     int? limit,
     int? offset,
     Boundary? start,

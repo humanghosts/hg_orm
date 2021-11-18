@@ -1,22 +1,22 @@
 import 'package:hg_entity/attribute/attribute_custom.dart';
 import 'package:hg_orm/dao/api/sort.dart';
 
-class SortValue implements CustomValue {
-  Sort? sort;
+class HgSortValue implements CustomValue {
+  HgSort? sort;
 
   @override
   bool get isNull => sort == null;
 
   @override
   void merge(CustomValue value) {
-    if (value is SortValue) {
+    if (value is HgSortValue) {
       sort = value.sort;
     }
   }
 
   @override
   Object? toMap() {
-    Sort? sort = this.sort;
+    HgSort? sort = this.sort;
     if (null == sort) return null;
     return {
       "field": sort.field,
@@ -27,7 +27,7 @@ class SortValue implements CustomValue {
   @override
   Future<void> fromMap(Object value) async {
     if (value is Map) {
-      sort = Sort(
+      sort = HgSort(
         field: value["field"],
         op: SortOp.map[value["op"]]!,
       );
@@ -35,8 +35,8 @@ class SortValue implements CustomValue {
   }
 
   @override
-  SortValue clone() {
-    SortValue sortValue = SortValue();
+  HgSortValue clone() {
+    HgSortValue sortValue = HgSortValue();
     Object? map = toMap();
     if (null != map) {
       sortValue.fromMap(map);

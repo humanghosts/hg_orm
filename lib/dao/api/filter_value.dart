@@ -42,9 +42,9 @@ class SingleHgFilterValue implements HgFilterValue {
           }
         } else if (obj is SimpleModel) {
           if (filterValue is List) {
-            value.add(filterValue.map((e) => Convertor.getModelValue(e as SimpleModel)).toList());
+            value.add(filterValue.map((e) => Convertor.getModelValue(e as SimpleModel, true, true)).toList());
           } else {
-            value.add(Convertor.getModelValue(filterValue as SimpleModel));
+            value.add(Convertor.getModelValue(filterValue as SimpleModel, true, true));
           }
         } else if (obj is CustomValue) {
           if (filterValue is List) {
@@ -121,11 +121,11 @@ class SingleHgFilterValue implements HgFilterValue {
           if (mapValue is List) {
             List<SimpleModel> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
-              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), oneMapValue) as SimpleModel);
+              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), oneMapValue, true, true) as SimpleModel);
             }
             filter.appendList(oneValueAsList);
           } else {
-            filter.append(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), mapValue) as SimpleModel);
+            filter.append(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), mapValue, true, true) as SimpleModel);
           }
         }
         // 自定义值类型

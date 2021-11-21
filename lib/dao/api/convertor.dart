@@ -16,30 +16,30 @@ abstract class Convertor {
   Object sortConvert(HgSort sort);
 
   /// model转换为仓库的数据类型
-  Object modelConvert(Model model) {
-    return getModelValue(model);
+  Object modelConvert(Model model, bool isLogicDelete, bool isCache) {
+    return getModelValue(model, isLogicDelete, isCache);
   }
 
   /// 仓库的数据类型转换为model类型，最好保证model是新的
-  Future<Model> convertToModel(Model model, Object? value) async {
-    return await setModelValue(model, value);
+  Future<Model> convertToModel(Model model, Object? value, bool isLogicDelete, bool isCache) async {
+    return await setModelValue(model, value, isLogicDelete, isCache);
   }
 
   /// attribute的数据类型转换为仓库数据类型
-  Object? attributeConvert(Attribute attribute) {
-    return getAttributeValue(attribute);
+  Object? attributeConvert(Attribute attribute, bool isLogicDelete, bool isCache) {
+    return getAttributeValue(attribute, isLogicDelete, isCache);
   }
 
   /// 仓库的数据类型回设attribute的value,最好保证attribute是新的
-  Future<Attribute> convertToAttribute(Attribute attribute, Object? value) async {
-    return await setAttributeValue(attribute, value);
+  Future<Attribute> convertToAttribute(Attribute attribute, Object? value, bool isLogicDelete, bool isCache) async {
+    return await setAttributeValue(attribute, value, isLogicDelete, isCache);
   }
 
   /// 供其它类使用的方法
-  static Object getModelValue(Model model) {
+  static Object getModelValue(Model model, bool isLogicDelete, bool isCache) {
     Map<String, Object> map = <String, Object>{};
     for (Attribute attribute in model.attributes.list) {
-      Object? value = getAttributeValue(attribute);
+      Object? value = getAttributeValue(attribute, isLogicDelete, isCache);
       if (null == value) {
         continue;
       }
@@ -49,7 +49,7 @@ abstract class Convertor {
   }
 
   /// 供其它类使用的方法
-  static Future<Model> setModelValue(Model model, Object? value) async {
+  static Future<Model> setModelValue(Model model, Object? value, bool isLogicDelete, bool isCache) async {
     if (null == value) {
       return model;
     }
@@ -58,23 +58,27 @@ abstract class Convertor {
     }
     for (Attribute attribute in model.attributes.list) {
       String attributeName = attribute.name;
-      await setAttributeValue(attribute, value[attributeName]);
+      await setAttributeValue(attribute, value[attributeName], isLogicDelete, isCache);
     }
     return model;
   }
 
   /// 供其它类使用的方法
-  static Object? getAttributeValue(Attribute attribute) {
+  static Object? getAttributeValue(Attribute attribute, bool isLogicDelete, bool isCache) {
     // 属性为空
     if (attribute.isNull) return null;
     // 模型属性
     if (attribute is ModelAttribute) {
       if (attribute is DataModelAttribute) {
+        // 处理数据模型的逻辑删除
+        if (attribute.value!.isDelete.value == true && isLogicDelete) {
+          return null;
+        }
         return attribute.value!.id.value;
       } else if (attribute is SimpleModelAttribute) {
-        return getModelValue(attribute.value!);
+        return getModelValue(attribute.value!, isLogicDelete, isCache);
       } else {
-        return getModelValue(attribute.value!);
+        return getModelValue(attribute.value!, isLogicDelete, isCache);
       }
     }
     // 自定义属性
@@ -85,11 +89,19 @@ abstract class Convertor {
     else if (attribute is ListAttribute) {
       if (attribute is ModelListAttribute) {
         if (attribute is DataModelListAttribute) {
-          return attribute.value.map((e) => e.id.value).toList();
+          List<String> idList = [];
+          // 处理数据模型的逻辑删除
+          for (DataModel item in attribute.value) {
+            if (item.isDelete.value == true && isLogicDelete) {
+              continue;
+            }
+            idList.add(item.id.value);
+          }
+          return idList;
         } else if (attribute is SimpleModelListAttribute) {
-          return attribute.value.map((e) => getModelValue(e)).toList();
+          return attribute.value.map((e) => getModelValue(e, isLogicDelete, isCache)).toList();
         } else {
-          return attribute.value.map((e) => getModelValue(e)).toList();
+          return attribute.value.map((e) => getModelValue(e, isLogicDelete, isCache)).toList();
         }
       } else if (attribute is CustomListAttribute) {
         return attribute.value.map((e) => e.toMap()).toList();
@@ -111,7 +123,7 @@ abstract class Convertor {
   }
 
   /// 供其它类使用的方法
-  static Future<Attribute> setAttributeValue(Attribute attribute, Object? value) async {
+  static Future<Attribute> setAttributeValue(Attribute attribute, Object? value, bool isLogicDelete, bool isCache) async {
     if (null == value) {
       attribute.clear();
       return attribute;
@@ -121,11 +133,11 @@ abstract class Convertor {
       if (attribute is DataModelAttribute) {
         // 数据库查询
         DataDao<DataModel> dao = DaoCache.getByType(attribute.type) as DataDao<DataModel>;
-        attribute.valueTypeless = await dao.findByID(value as String);
+        attribute.valueTypeless = await dao.findByID(value as String, isLogicDelete: isLogicDelete, isCache: isCache);
       } else if (attribute is SimpleModelAttribute) {
-        attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value) as SimpleModel;
+        attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value, isLogicDelete, isCache) as SimpleModel;
       } else {
-        attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value);
+        attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value, isLogicDelete, isCache);
       }
     }
     // 自定义属性
@@ -145,24 +157,18 @@ abstract class Convertor {
           // 数据库查询
           DataDao<DataModel> dao = DaoCache.getByType(attribute.type) as DataDao<DataModel>;
           attribute.clear();
-          for (Object obj in listValue) {
-            DataModel? model = await dao.findByID(obj as String);
-            if (null == model) {
-              continue;
-            }
-            attribute.append(model);
-          }
+          attribute.appendAll(await dao.findByIDList(listValue.map((e) => e as String).toList(), isLogicDelete: isLogicDelete, isCache: isCache));
         }
         // 简单模型列表属性
         else if (attribute is SimpleModelListAttribute) {
           attribute.clear();
           for (var oneValue in listValue) {
-            attribute.append(await setModelValue(ConstructorCache.get(attribute.type), oneValue) as SimpleModel);
+            attribute.append(await setModelValue(ConstructorCache.get(attribute.type), oneValue, isLogicDelete, isCache) as SimpleModel);
           }
         } else {
           attribute.clear();
           for (var oneValue in listValue) {
-            attribute.append(await setModelValue(ConstructorCache.get(attribute.type), oneValue));
+            attribute.append(await setModelValue(ConstructorCache.get(attribute.type), oneValue, isLogicDelete, isCache));
           }
         }
       }

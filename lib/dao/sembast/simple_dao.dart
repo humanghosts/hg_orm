@@ -47,14 +47,14 @@ class SembastSimpleDao<T extends SimpleModel> extends SimpleDao<T> {
   }
 
   Future<void> _insert(T model, [Transaction? tx]) async {
-    await store.record(_storeName).add(tx ?? dataBase, convertor.modelConvert(model));
+    await store.record(_storeName).add(tx ?? dataBase, convertor.modelConvert(model, true, true));
   }
 
   Future<void> _update(T model, [Transaction? tx]) async {
     /// 这里用put不用update的原因是：
     /// sembast的update是foreach map的update，如果以前有key，现在没有key，
     /// 无法清空数据，所以就直接替换了
-    await store.record(_storeName).put(tx ?? dataBase, convertor.modelConvert(model));
+    await store.record(_storeName).put(tx ?? dataBase, convertor.modelConvert(model, true, true));
   }
 
   Future<void> _delete(T model, [Transaction? tx]) async {
@@ -75,7 +75,7 @@ class SembastSimpleDao<T extends SimpleModel> extends SimpleDao<T> {
     }
     Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
     T t = ConstructorCache.get(T);
-    await convertor.convertToModel(t, map);
+    await convertor.convertToModel(t, map, true, true);
     t.state = States.query;
     return [t];
   }

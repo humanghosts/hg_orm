@@ -51,38 +51,46 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
 
   bool get isLogicDelete => _isLogicDelete;
 
+  /// 保存
   @override
-  Future<List<T>> find({HgFilter? filter, List<HgSort>? sorts});
-
-  /// 查找全部
-  Future<List<T>> findAll();
-
-  /// 查找符合条件的第一个
-  Future<T?> findFirst({HgFilter? filter, List<HgSort>? sorts});
+  Future<void> save(T model, {bool? isLogicDelete, bool? isCache});
 
   /// 存储列表
-  Future<void> saveList(List<T> modelList);
+  Future<void> saveList(List<T> modelList, {bool? isLogicDelete, bool? isCache});
+
+  /// 删除
+  @override
+  Future<void> remove(T model, {bool? isLogicDelete, bool? isCache});
 
   /// 移除列表
-  Future<void> removeList(List<T> modelList);
-
-  /// 恢复列表
-  Future<void> recoverList(List<T> modelList);
-
-  /// 通过ID查询
-  Future<T?> findByID(String id);
-
-  /// 通过ID查询
-  Future<List<T>> findByIDList(List<String> id);
-
-  /// 计数
-  Future<int> count({HgFilter? filter});
+  Future<void> removeList(List<T> modelList, {bool? isLogicDelete, bool? isCache});
 
   /// 删除恢复
-  Future<void> recover(T model);
+  Future<void> recover(T model, {bool? isLogicDelete, bool? isCache});
+
+  /// 恢复列表
+  Future<void> recoverList(List<T> modelList, {bool? isLogicDelete, bool? isCache});
+
+  @override
+  Future<List<T>> find({HgFilter? filter, List<HgSort>? sorts, bool? isLogicDelete, bool? isCache});
+
+  /// 查找全部
+  Future<List<T>> findAll({bool? isLogicDelete, bool? isCache});
+
+  /// 查找符合条件的第一个
+  Future<T?> findFirst({HgFilter? filter, List<HgSort>? sorts, bool? isLogicDelete, bool? isCache});
+
+  /// 通过ID查询
+  Future<T?> findByID(String id, {bool? isLogicDelete, bool? isCache});
+
+  /// 通过ID查询
+  Future<List<T>> findByIDList(List<String> id, {bool? isLogicDelete, bool? isCache});
+
+  /// 计数
+  Future<int> count({HgFilter? filter, bool? isLogicDelete, bool? isCache});
 
   /// 通过id恢复删除
-  Future<void> recoverById(String id);
+  Future<void> recoverById(String id, {bool? isLogicDelete, bool? isCache});
 }
 
 abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
@@ -94,7 +102,7 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
         );
 
   /// 按树查找
-  Future<List<T>> findTree({HgFilter? filter, List<HgSort>? sorts});
+  Future<List<T>> findTree({HgFilter? filter, List<HgSort>? sorts, bool? isLogicDelete, bool? isCache});
 }
 
 /// 用于普通模型(只有一个模型)的dao

@@ -1,5 +1,6 @@
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/dao/api/export.dart';
+import 'package:hg_orm/dao/api/transaction.dart';
 import 'package:hg_orm/dao/export.dart';
 import 'package:sembast/sembast.dart';
 
@@ -10,7 +11,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   SembastDataTreeDao({bool? isLogicDelete, bool? isCache}) : super(isLogicDelete: isLogicDelete, isCache: isCache);
 
   @override
-  Future<void> save(T model, {Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> save(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
     // 子节点
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
@@ -19,9 +20,9 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       }
     }
     if (null == tx) {
-      await dataBase.transaction((transaction) async {
-        await saveList(children, tx: transaction, isLogicDelete: isLogicDelete, isCache: isCache);
-        await super.save(model, tx: transaction, isLogicDelete: isLogicDelete, isCache: isCache);
+      await transaction((tx) async {
+        await saveList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        await super.save(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       });
     } else {
       await saveList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -30,7 +31,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   }
 
   @override
-  Future<void> remove(T model, {Transaction? tx, bool? isLogicDelete, bool? isCache, bool isRemoveChildren = true}) async {
+  Future<void> remove(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache, bool isRemoveChildren = true}) async {
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
       for (DataModel child in model.children.value) {
@@ -38,9 +39,9 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       }
     }
     if (null == tx) {
-      await dataBase.transaction((transaction) async {
-        if (isRemoveChildren) await removeList(children, tx: transaction, isLogicDelete: isLogicDelete, isCache: isCache);
-        await super.remove(model, tx: transaction, isLogicDelete: isLogicDelete, isCache: isCache);
+      await transaction((tx) async {
+        if (isRemoveChildren) await removeList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        await super.remove(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       });
     } else {
       if (isRemoveChildren) await removeList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -49,7 +50,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   }
 
   @override
-  Future<void> recover(T model, {Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> recover(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
       for (DataModel child in model.children.value) {
@@ -57,9 +58,9 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       }
     }
     if (null == tx) {
-      await dataBase.transaction((transaction) async {
-        await recoverList(children, tx: transaction, isLogicDelete: isLogicDelete, isCache: isCache);
-        await super.recover(model, tx: transaction, isLogicDelete: isLogicDelete, isCache: isCache);
+      await transaction((tx) async {
+        await recoverList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        await super.recover(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       });
     } else {
       await recoverList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -71,6 +72,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   /// 先全查回来，然后组装成树
   @override
   Future<List<T>> findTree({
+    HgTransaction? tx,
     HgFilter? filter,
     List<HgSort>? sorts,
     int? limit,
@@ -87,6 +89,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       offset: offset,
       start: start,
       end: end,
+      tx: tx,
       isCache: isCache,
       isLogicDelete: isLogicDelete,
     );

@@ -29,10 +29,21 @@ class SembastSimpleDao<T extends SimpleModel> extends SimpleDao<T> {
   SembastConvertor get convertor => super.convertor as SembastConvertor;
 
   @override
-  Future<void> transaction(Future<void> Function(HgTransaction tx) action) {
-    return dataBase.transaction((tx) async {
+  Future<void> transaction(Future<void> Function(HgTransaction tx) action) async {
+    return await dataBase.transaction((tx) async {
       await action(HgTransaction(tx));
     });
+  }
+
+  @override
+  Future<void> withTransaction(HgTransaction? tx, Future<void> Function(HgTransaction tx) action) async {
+    if (null == tx) {
+      await transaction((tx) async {
+        await action(tx);
+      });
+    } else {
+      await action(tx);
+    }
   }
 
   /// 保存，存在更新，不存在插入
@@ -77,14 +88,18 @@ class SembastSimpleDao<T extends SimpleModel> extends SimpleDao<T> {
 
   @override
   Future<List<T>> find({HgTransaction? tx}) async {
-    Object? value = await store.record(_storeName).get(dataBase);
-    if (null == value) {
-      return [];
-    }
-    Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
-    T t = ConstructorCache.get(T);
-    await convertor.convertToModel(t, map, tx, true, true);
-    t.state = States.query;
-    return [t];
+    List<T> modelList = [];
+    await withTransaction(tx, (tx) async {
+      Object? value = await store.record(_storeName).get(tx.getTx());
+      if (null == value) {
+        return;
+      }
+      Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
+      T t = ConstructorCache.get(T);
+      await convertor.convertToModel(t, map, tx, true, true);
+      t.state = States.query;
+      modelList.add(t);
+    });
+    return modelList;
   }
 }

@@ -1,6 +1,5 @@
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/context/export.dart';
-import 'package:hg_orm/dao/api/transaction.dart';
 
 import 'convertor.dart';
 import 'dao.dart';
@@ -77,8 +76,10 @@ class SingleHgFilterValue implements HgFilterValue {
     };
   }
 
+  /// TODO 这里的fromMap要查数据，但是没有事务，可能是个隐患
+  /// 事务定义在orm里面，fromMap定义在entity里面，使用fromMap都是基于超类的定义，事务暂时加不上
   @override
-  Future<void> fromMap(Object value, {HgTransaction? tx}) async {
+  Future<void> fromMap(Object value) async {
     if (value is! Map) {
       return;
     }
@@ -122,11 +123,11 @@ class SingleHgFilterValue implements HgFilterValue {
           if (mapValue is List) {
             List<SimpleModel> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
-              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), oneMapValue, tx, true, true) as SimpleModel);
+              oneValueAsList.add(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), oneMapValue, null, true, true) as SimpleModel);
             }
             filter.appendList(oneValueAsList);
           } else {
-            filter.append(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), mapValue, tx, true, true) as SimpleModel);
+            filter.append(await Convertor.setModelValue(ConstructorCache.getByStr(valueType), mapValue, null, true, true) as SimpleModel);
           }
         }
         // 自定义值类型

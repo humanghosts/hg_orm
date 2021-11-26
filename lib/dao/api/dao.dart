@@ -25,6 +25,8 @@ abstract class Dao<T extends Model> {
 
   Future<void> transaction(Future<void> Function(HgTransaction tx) action);
 
+  Future<void> withTransaction(HgTransaction? tx, Future<void> Function(HgTransaction tx) action);
+
   /// 保存
   Future<void> save(T model, {HgTransaction? tx});
 
@@ -63,7 +65,7 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
   Future<void> saveList(List<T> modelList, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 条件更新
-  Future<void> update(HgFilter filter, Map<String, Object?> value, {HgTransaction? tx});
+  Future<void> updateWhere(HgFilter filter, Map<String, Object?> value, {HgTransaction? tx});
 
   /// 删除
   @override

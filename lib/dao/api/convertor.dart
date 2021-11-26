@@ -36,6 +36,14 @@ abstract class Convertor {
     return await setAttributeValue(attribute, value, tx, isLogicDelete, isCache);
   }
 
+  int dateTimeConvert(DateTime dateTime) {
+    return getDateTimeValue(dateTime);
+  }
+
+  DateTime convertToDateTIme(int value) {
+    return setDateTimeValue(value);
+  }
+
   /// 供其它类使用的方法
   static Object getModelValue(Model model, HgTransaction? tx, bool isLogicDelete, bool isCache) {
     Map<String, Object> map = <String, Object>{};
@@ -107,7 +115,7 @@ abstract class Convertor {
       } else if (attribute is CustomListAttribute) {
         return attribute.value.map((e) => e.toMap()).toList();
       } else if (attribute is DateTimeListAttribute) {
-        return attribute.value.map((e) => e.millisecondsSinceEpoch).toList();
+        return attribute.value.map((e) => getDateTimeValue(e)).toList();
       } else {
         return attribute.value;
       }
@@ -116,7 +124,7 @@ abstract class Convertor {
     else {
       Type type = attribute.type;
       if (type == DateTime || type.toString() == "DateTime?") {
-        return (attribute.value as DateTime).millisecondsSinceEpoch;
+        return getDateTimeValue((attribute.value as DateTime));
       } else {
         return attribute.value;
       }
@@ -184,7 +192,7 @@ abstract class Convertor {
       }
       // 时间列表属性
       else if (attribute is DateTimeListAttribute) {
-        attribute.valueTypeless = listValue.map((e) => DateTime.fromMillisecondsSinceEpoch(e as int)).toList();
+        attribute.valueTypeless = listValue.map((e) => setDateTimeValue(e as int)).toList();
       }
       // 其它列表属性
       else {
@@ -196,11 +204,21 @@ abstract class Convertor {
     else {
       Type type = attribute.type;
       if (type == DateTime || type.toString() == "DateTime?") {
-        attribute.valueTypeless = DateTime.fromMillisecondsSinceEpoch(value as int);
+        attribute.valueTypeless = setDateTimeValue(value as int);
       } else {
         attribute.valueTypeless = value;
       }
     }
     return attribute;
+  }
+
+  /// 转换时间类型
+  static int getDateTimeValue(DateTime dateTime) {
+    return dateTime.millisecondsSinceEpoch;
+  }
+
+  /// 转换为时间类型
+  static DateTime setDateTimeValue(int dateTimeValue) {
+    return DateTime.fromMillisecondsSinceEpoch(dateTimeValue);
   }
 }

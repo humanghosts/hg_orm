@@ -1,5 +1,5 @@
 class HgTransaction {
-  Object? transaction;
+  Object transaction;
 
   HgTransaction(this.transaction);
 
@@ -7,9 +7,8 @@ class HgTransaction {
     if (null == tx) {
       return defaultTx;
     }
-    if (null != tx.transaction) {
-      return tx.transaction! as T;
-    }
-    return defaultTx;
+    return tx.transaction as T;
   }
+
+  T getTx<T>() => transaction as T;
 }

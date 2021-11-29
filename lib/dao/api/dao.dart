@@ -113,6 +113,9 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
 
   /// 按树查找
   Future<List<T>> findTree({HgFilter? filter, List<HgSort>? sorts, HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+
+  /// 列表变树
+  List<T> listToTree(List<T> modelList);
 }
 
 /// 用于普通模型(只有一个模型)的dao

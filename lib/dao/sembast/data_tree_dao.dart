@@ -166,8 +166,12 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       isCache: isCache,
       isLogicDelete: isLogicDelete,
     );
-    if (modelList.isEmpty) return modelList;
+    return listToTree(modelList);
+  }
 
+  @override
+  List<T> listToTree(List<T> modelList) {
+    if (modelList.isEmpty) return modelList;
     // fullPath:Model
     Map<String, T> modelMap = {};
     List<String> fullPathList = [];

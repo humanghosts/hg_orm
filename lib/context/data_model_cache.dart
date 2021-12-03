@@ -57,6 +57,12 @@ class DataModelCache {
     return null;
   }
 
+  /// 清空缓存
+  static void clear() {
+    _doneCache.clear();
+    _undoneCache.clear();
+  }
+
   /// 移除缓存，会移除所有缓存池中的缓存
   static void remove(String id) {
     _doneCache.remove(id);

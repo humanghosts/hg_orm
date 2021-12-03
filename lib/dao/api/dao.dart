@@ -30,6 +30,9 @@ abstract class Dao<T extends Model> {
   /// 保存
   Future<void> save(T model, {HgTransaction? tx});
 
+  /// 更新
+  Future<void> update(String id, Map<String, Object?> value, {HgTransaction? tx});
+
   /// 删除
   Future<void> remove(T model, {HgTransaction? tx});
 
@@ -64,6 +67,13 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
   /// 存储列表
   Future<void> saveList(List<T> modelList, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
 
+  /// 更新
+  @override
+  Future<void> update(String id, Map<String, Object?> value, {HgTransaction? tx});
+
+  /// 更新列表
+  Future<void> updateList(List<String> idList, Map<String, Object?> value, {HgTransaction? tx});
+
   /// 条件更新
   Future<void> updateWhere(HgFilter filter, Map<String, Object?> value, {HgTransaction? tx});
 
@@ -78,13 +88,13 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
   Future<void> removeWhere(HgFilter filter, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 删除恢复
-  Future<void> recover(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> recover(T model, {HgTransaction? tx, bool? isCache});
 
   /// 恢复列表
-  Future<void> recoverList(List<T> modelList, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> recoverList(List<T> modelList, {HgTransaction? tx, bool? isCache});
 
   /// 条件恢复
-  Future<void> recoverWhere(HgFilter filter, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> recoverWhere(HgFilter filter, {HgTransaction? tx, bool? isCache});
 
   /// 查找
   @override

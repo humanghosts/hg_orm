@@ -107,6 +107,30 @@ class SembastDataDao<T extends DataModel> extends DataDao<T> {
     });
   }
 
+  @override
+  Future<void> update(String id, Map<String, Object?> value, {HgTransaction? tx}) async {
+    await store.record(id).update(
+      HgTransaction.getOr(tx, dataBase),
+      {
+        ...value,
+        sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+      },
+    );
+    DataModelCache.remove(id);
+  }
+
+  @override
+  Future<void> updateList(List<String> idList, Map<String, Object?> value, {HgTransaction? tx}) async {
+    if (idList.isEmpty) {
+      return;
+    }
+    await withTransaction(tx, (tx) async {
+      for (String id in idList) {
+        await update(id, value, tx: tx);
+      }
+    });
+  }
+
   /// 更新，同时移除缓存
   @override
   Future<void> updateWhere(HgFilter filter, Map<String, Object?> value, {HgTransaction? tx}) async {
@@ -120,12 +144,13 @@ class SembastDataDao<T extends DataModel> extends DataDao<T> {
       Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
       // 更新
       await store.update(
-          tx.getTx(),
-          {
-            ...value,
-            sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
-          },
-          finder: finder);
+        tx.getTx(),
+        {
+          ...value,
+          sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+        },
+        finder: finder,
+      );
       removeIdList = idList;
     });
     for (var id in removeIdList) {
@@ -169,13 +194,14 @@ class SembastDataDao<T extends DataModel> extends DataDao<T> {
       if (logicDelete) {
         // 逻辑删除
         await store.update(
-            tx.getTx(),
-            {
-              sampleModel.isDelete.name: true,
-              sampleModel.deleteTime.name: convertor.dateTimeConvert(DateTime.now()),
-              sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
-            },
-            finder: finder);
+          tx.getTx(),
+          {
+            sampleModel.isDelete.name: true,
+            sampleModel.deleteTime.name: convertor.dateTimeConvert(DateTime.now()),
+            sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+          },
+          finder: finder,
+        );
       } else {
         // 永久删除
         await store.delete(tx.getTx(), finder: finder);
@@ -190,40 +216,33 @@ class SembastDataDao<T extends DataModel> extends DataDao<T> {
 
   /// 恢复，同时修改状态为query
   @override
-  Future<void> recover(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> recover(T model, {HgTransaction? tx, bool? isCache}) async {
     if (model.isDelete.value == false) {
       return;
     }
     model.isDelete.value = false;
     model.deleteTime.value = null;
     // 直接替换数据
-    await store.record(model.id.value).put(
-        HgTransaction.getOr(tx, dataBase),
-        convertor.modelConvert(
-          model,
-          tx,
-          isLogicDelete ?? this.isLogicDelete,
-          isCache ?? this.isCache,
-        ));
+    await store.record(model.id.value).put(HgTransaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, false, isCache ?? this.isCache));
     model.state = States.query;
     DataModelCache.put(model);
   }
 
   @override
-  Future<void> recoverList(List<T> modelList, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> recoverList(List<T> modelList, {HgTransaction? tx, bool? isCache}) async {
     if (modelList.isEmpty) {
       return;
     }
     await withTransaction(tx, (tx) async {
       for (T model in modelList) {
-        await recover(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        await recover(model, tx: tx, isCache: isCache);
       }
     });
   }
 
   /// 恢复，同时移除缓存
   @override
-  Future<void> recoverWhere(HgFilter filter, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> recoverWhere(HgFilter filter, {HgTransaction? tx, bool? isCache}) async {
     List recoverIdList = [];
     await withTransaction(tx, (tx) async {
       // 删除前留下ID，便于后面删除缓存
@@ -234,13 +253,14 @@ class SembastDataDao<T extends DataModel> extends DataDao<T> {
       // 换成id的过滤条件，简化一下
       Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
       await store.update(
-          tx.getTx(),
-          {
-            sampleModel.isDelete.name: false,
-            sampleModel.deleteTime.name: null,
-            sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
-          },
-          finder: finder);
+        tx.getTx(),
+        {
+          sampleModel.isDelete.name: false,
+          sampleModel.deleteTime.name: null,
+          sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+        },
+        finder: finder,
+      );
       recoverIdList = idList;
     });
     // 按照同样的条件查询一下id，防止缓存和数据库不一致

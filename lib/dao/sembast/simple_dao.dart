@@ -87,6 +87,11 @@ class SembastSimpleDao<T extends SimpleModel> extends SimpleDao<T> {
   }
 
   @override
+  Future<void> update(String id, Map<String, Object?> value, {HgTransaction? tx}) async {
+    await store.record(_storeName).update(HgTransaction.getOr(tx, dataBase), value);
+  }
+
+  @override
   Future<List<T>> find({HgTransaction? tx}) async {
     List<T> modelList = [];
     await withTransaction(tx, (tx) async {

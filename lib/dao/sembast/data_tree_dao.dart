@@ -101,7 +101,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   }
 
   @override
-  Future<void> recover(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> recover(T model, {HgTransaction? tx, bool? isCache}) async {
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
       for (DataModel child in model.children.value) {
@@ -109,8 +109,8 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       }
     }
     await withTransaction(tx, (tx) async {
-      await recoverList(children, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
-      await super.recover(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+      await recoverList(children, tx: tx, isCache: isCache);
+      await super.recover(model, tx: tx, isCache: isCache);
     });
   }
 

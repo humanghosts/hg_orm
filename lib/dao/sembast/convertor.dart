@@ -48,8 +48,14 @@ class SembastConvertor extends Convertor {
           if (!map.containsKey(field)) {
             return false;
           }
-          DateTime start = valueList[0] as DateTime;
-          DateTime end = valueList[1] as DateTime;
+          int startInt = 0;
+          int endInt = 0;
+          if (valueList[0] is DateTime) {
+            startInt = (valueList[0] as DateTime).millisecondsSinceEpoch;
+          }
+          if (valueList[1] is DateTime) {
+            endInt = (valueList[1] as DateTime).millisecondsSinceEpoch;
+          }
           Object? value = map[field];
           if (null == value) {
             return false;
@@ -57,11 +63,17 @@ class SembastConvertor extends Convertor {
           if (value is! int) {
             return false;
           }
-          DateTime dateTimeValue = DateTime.fromMicrosecondsSinceEpoch(value);
-          if (start.isBefore(dateTimeValue) && end.isAfter(dateTimeValue)) {
-            return true;
+          if (startInt == 0 && endInt == 0) {
+            return false;
           }
-          return false;
+          if (startInt != 0 && endInt != 0) {
+            return value < endInt && value > startInt;
+          }
+          if (startInt == 0) {
+            return value < endInt;
+          } else {
+            return value > startInt;
+          }
         });
       case SingleFilterOp.containsAll:
         return Filter.custom((RecordSnapshot record) {

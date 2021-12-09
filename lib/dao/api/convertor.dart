@@ -142,7 +142,10 @@ abstract class Convertor {
       if (attribute is DataModelAttribute) {
         // 数据库查询
         DataDao<DataModel> dao = DaoCache.getByType(attribute.type) as DataDao<DataModel>;
-        attribute.valueTypeless = await dao.findByID(value as String, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        DataModel? model = await dao.findByID(value as String, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        if (null != model) {
+          attribute.valueTypeless = model;
+        }
       } else if (attribute is SimpleModelAttribute) {
         attribute.valueTypeless = await setModelValue(ConstructorCache.get(attribute.type), value, tx, isLogicDelete, isCache) as SimpleModel;
       } else {

@@ -97,6 +97,9 @@ class SingleHgFilter extends HgFilter {
   /// 获取值
   List<Object> get value => _value;
 
+  /// 获取指定位置的值
+  Object? getValueByIndex(int index) {}
+
   /// 想List类型的value中追加一个值，校验或存储值类型
   /// 如果追加的值是List类型，将调用appendList
   void append(Object value) {
@@ -117,9 +120,9 @@ class SingleHgFilter extends HgFilter {
   }
 
   /// 获取某个位置的值
-  T get<T>(int index) {
-    if (_valueType == null) {
-      return _value[index] as T;
+  T? get<T>(int index) {
+    if (index >= _value.length) {
+      return null;
     }
     return _value[index] as T;
   }
@@ -264,6 +267,8 @@ class SingleFilterOp extends FilterOp {
   static const SingleFilterOp inList = SingleFilterOp._("在范围内", inListSymbol);
   static const SingleFilterOp notInList = SingleFilterOp._("不在范围内", inListSymbol);
   static const SingleFilterOp matches = SingleFilterOp._("匹配", matchesSymbol);
+
+  /// 左闭右开区间
   static const SingleFilterOp between = SingleFilterOp._("在区间内", betweenSymbol, 2);
   static const SingleFilterOp containsAll = SingleFilterOp._("包含全部", containsAllSymbol);
   static const SingleFilterOp containsOne = SingleFilterOp._("至少包含一个", containsOneSymbol);

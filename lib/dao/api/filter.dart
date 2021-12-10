@@ -1,7 +1,7 @@
 /// 数据库查询的过滤条件
-abstract class HgFilter {
+abstract class Filter {
   /// 拷贝
-  HgFilter clone();
+  Filter clone();
 }
 
 /// 单个过滤条件
@@ -9,7 +9,7 @@ abstract class HgFilter {
 /// 如between操作服，操作元素是两个，分别放在值的第0位和第1位，
 /// inList虽然是列表类型的条件，但是整个List条件只会放在第0位
 /// 无论是几个元素的操作符，都要求所有值的类型要一致，包括List中的每一个元素。
-class SingleHgFilter extends HgFilter {
+class SingleFilter extends Filter {
   /// 字段名称 不可为空
   String field;
 
@@ -22,72 +22,72 @@ class SingleHgFilter extends HgFilter {
   /// 值类型，集合类型为泛型类型
   Type? _valueType;
 
-  SingleHgFilter({required this.field, this.op = SingleFilterOp.equals});
+  SingleFilter({required this.field, this.op = SingleFilterOp.equals});
 
   /// 等于
-  SingleHgFilter.equals({required this.field, required Object value}) : op = SingleFilterOp.equals {
+  SingleFilter.equals({required this.field, required Object value}) : op = SingleFilterOp.equals {
     append(value);
   }
 
   /// 不等于
-  SingleHgFilter.notEquals({required this.field, required Object value}) : op = SingleFilterOp.notEquals {
+  SingleFilter.notEquals({required this.field, required Object value}) : op = SingleFilterOp.notEquals {
     append(value);
   }
 
   /// 为空
-  SingleHgFilter.isNull({required this.field}) : op = SingleFilterOp.isNull;
+  SingleFilter.isNull({required this.field}) : op = SingleFilterOp.isNull;
 
   /// 非空
-  SingleHgFilter.notNull({required this.field}) : op = SingleFilterOp.notNull;
+  SingleFilter.notNull({required this.field}) : op = SingleFilterOp.notNull;
 
   /// 小于
-  SingleHgFilter.lessThan({required this.field, required Object value}) : op = SingleFilterOp.lessThan {
+  SingleFilter.lessThan({required this.field, required Object value}) : op = SingleFilterOp.lessThan {
     append(value);
   }
 
   /// 小于等于
-  SingleHgFilter.lessThanOrEquals({required this.field, required Object value}) : op = SingleFilterOp.lessThanOrEquals {
+  SingleFilter.lessThanOrEquals({required this.field, required Object value}) : op = SingleFilterOp.lessThanOrEquals {
     append(value);
   }
 
   /// 大于
-  SingleHgFilter.greaterThan({required this.field, required Object value}) : op = SingleFilterOp.greaterThan {
+  SingleFilter.greaterThan({required this.field, required Object value}) : op = SingleFilterOp.greaterThan {
     append(value);
   }
 
   /// 大于等于
-  SingleHgFilter.greaterThanOrEquals({required this.field, required Object value}) : op = SingleFilterOp.greaterThanOrEquals {
+  SingleFilter.greaterThanOrEquals({required this.field, required Object value}) : op = SingleFilterOp.greaterThanOrEquals {
     append(value);
   }
 
   /// 在列表中(数据库中存储的值为单个，查询条件为多个)
-  SingleHgFilter.inList({required this.field, required List value}) : op = SingleFilterOp.inList {
+  SingleFilter.inList({required this.field, required List value}) : op = SingleFilterOp.inList {
     appendList(value);
   }
 
   /// 不在列表中(数据库中存储的值为单个，查询条件为多个)
-  SingleHgFilter.notInList({required this.field, required List value}) : op = SingleFilterOp.notInList {
+  SingleFilter.notInList({required this.field, required List value}) : op = SingleFilterOp.notInList {
     appendList(value);
   }
 
   /// 模糊匹配
-  SingleHgFilter.matches({required this.field, required Object value}) : op = SingleFilterOp.matches {
+  SingleFilter.matches({required this.field, required Object value}) : op = SingleFilterOp.matches {
     append(value);
   }
 
   /// 在区间内
-  SingleHgFilter.between({required this.field, required Object start, required Object end}) : op = SingleFilterOp.between {
+  SingleFilter.between({required this.field, required Object start, required Object end}) : op = SingleFilterOp.between {
     append(start);
     append(end);
   }
 
   /// 包含全部(数据库中存储的值为多个，查询条件为多个)
-  SingleHgFilter.containsAll({required this.field, required List value}) : op = SingleFilterOp.containsAll {
+  SingleFilter.containsAll({required this.field, required List value}) : op = SingleFilterOp.containsAll {
     appendList(value);
   }
 
   /// 至少包含一个(数据库中存储的值为多个，查询条件为多个)
-  SingleHgFilter.containsOne({required this.field, required List value}) : op = SingleFilterOp.containsOne {
+  SingleFilter.containsOne({required this.field, required List value}) : op = SingleFilterOp.containsOne {
     appendList(value);
   }
 
@@ -155,8 +155,8 @@ class SingleHgFilter extends HgFilter {
   }
 
   @override
-  SingleHgFilter clone() {
-    SingleHgFilter newSingleFilter = SingleHgFilter(field: field, op: op);
+  SingleFilter clone() {
+    SingleFilter newSingleFilter = SingleFilter(field: field, op: op);
     // TODO 这是浅克隆
     newSingleFilter._value.addAll(value);
     newSingleFilter._valueType = _valueType;
@@ -170,34 +170,34 @@ class SingleHgFilter extends HgFilter {
 }
 
 /// 组合过滤条件
-class GroupHgFilter extends HgFilter {
+class GroupFilter extends Filter {
   /// 组合操作服
   GroupFilterOp op;
 
   /// 子条件
-  late List<HgFilter> children;
+  late List<Filter> children;
 
-  GroupHgFilter({
+  GroupFilter({
     this.op = GroupFilterOp.and,
-    List<HgFilter>? children,
+    List<Filter>? children,
   }) {
     this.children = children ?? [];
   }
 
   /// 与
-  GroupHgFilter.and(List<HgFilter>? children) : op = GroupFilterOp.and {
+  GroupFilter.and(List<Filter>? children) : op = GroupFilterOp.and {
     this.children = children ?? [];
   }
 
   /// 或
-  GroupHgFilter.or(List<HgFilter>? children) : op = GroupFilterOp.or {
+  GroupFilter.or(List<Filter>? children) : op = GroupFilterOp.or {
     this.children = children ?? [];
   }
 
   @override
-  HgFilter clone() {
-    GroupHgFilter newGroupFilter = GroupHgFilter(op: op);
-    for (HgFilter child in children) {
+  Filter clone() {
+    GroupFilter newGroupFilter = GroupFilter(op: op);
+    for (Filter child in children) {
       newGroupFilter.children.add(child.clone());
     }
     return newGroupFilter;

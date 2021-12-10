@@ -1,17 +1,17 @@
 import 'package:flutter/cupertino.dart';
-import 'package:hg_orm/dao/api/export.dart';
+import 'package:hg_orm/dao/api/export.dart' as api;
 import 'package:sembast/sembast.dart';
 
 @immutable
-class SembastConvertor extends Convertor {
+class SembastConvertor extends api.Convertor {
   const SembastConvertor();
 
   @override
-  Filter filterConvert(HgFilter filter) {
-    if (filter is SingleHgFilter) {
+  Filter filterConvert(api.Filter filter) {
+    if (filter is api.SingleFilter) {
       return convertSingleFilter(filter);
     } else {
-      return convertGroupFilter(filter as GroupHgFilter);
+      return convertGroupFilter(filter as api.GroupFilter);
     }
   }
 
@@ -107,12 +107,12 @@ class SembastConvertor extends Convertor {
   }
 
   /// 转换单个过滤条件
-  Filter convertSingleFilter(SingleHgFilter filter) {
+  Filter convertSingleFilter(api.SingleFilter filter) {
     String field = filter.field;
-    FilterOp op = filter.op;
+    api.FilterOp op = filter.op;
     switch (op) {
       // 相等
-      case SingleFilterOp.equals:
+      case api.SingleFilterOp.equals:
         return Filter.custom((record) {
           Object? value = filter.get(0);
           return getMatch(
@@ -120,11 +120,18 @@ class SembastConvertor extends Convertor {
             field: field,
             // 如果value为null null as true
             nullAsTrue: value == null,
-            isMatch: (recordValue) => recordValue == value,
+            isMatch: (recordValue) {
+              if (value is DateTime) {
+                int intValue = value.millisecondsSinceEpoch;
+                return recordValue == intValue;
+              } else {
+                return recordValue == value;
+              }
+            },
           );
         });
       // 不等
-      case SingleFilterOp.notEquals:
+      case api.SingleFilterOp.notEquals:
         return Filter.custom((record) {
           Object? value = filter.get(0);
           return getMatch(
@@ -132,11 +139,18 @@ class SembastConvertor extends Convertor {
             field: field,
             // 如果value为null null as true
             nullAsTrue: value != null,
-            isMatch: (recordValue) => recordValue != value,
+            isMatch: (recordValue) {
+              if (value is DateTime) {
+                int intValue = value.millisecondsSinceEpoch;
+                return recordValue != intValue;
+              } else {
+                return recordValue != value;
+              }
+            },
           );
         });
       // 为空
-      case SingleFilterOp.isNull:
+      case api.SingleFilterOp.isNull:
         return Filter.custom((record) {
           return getMatch(
             record: record,
@@ -146,7 +160,7 @@ class SembastConvertor extends Convertor {
           );
         });
       // 非空
-      case SingleFilterOp.notNull:
+      case api.SingleFilterOp.notNull:
         return Filter.custom((record) {
           return getMatch(
             record: record,
@@ -156,47 +170,73 @@ class SembastConvertor extends Convertor {
           );
         });
       // 小于
-      case SingleFilterOp.lessThan:
+      case api.SingleFilterOp.lessThan:
         return Filter.custom((record) {
           Object? value = filter.get(0);
           return getMatch(
             record: record,
             field: field,
-            isMatch: (recordValue) => _lessThan(recordValue, value),
+            isMatch: (recordValue) {
+              if (value is DateTime) {
+                return _lessThan(recordValue, value.millisecondsSinceEpoch);
+              } else {
+                return _lessThan(recordValue, value);
+              }
+            },
           );
         });
       // 小于等于
-      case SingleFilterOp.lessThanOrEquals:
+      case api.SingleFilterOp.lessThanOrEquals:
         return Filter.custom((record) {
           Object? value = filter.get(0);
           return getMatch(
             record: record,
             field: field,
-            isMatch: (recordValue) => _lessThan(recordValue, value) || recordValue == value,
+            isMatch: (recordValue) {
+              if (value is DateTime) {
+                int intValue = value.millisecondsSinceEpoch;
+                return _lessThan(recordValue, intValue) || recordValue == intValue;
+              } else {
+                return _lessThan(recordValue, value) || recordValue == value;
+              }
+            },
           );
         });
       // 大于
-      case SingleFilterOp.greaterThan:
+      case api.SingleFilterOp.greaterThan:
         return Filter.custom((record) {
           Object? value = filter.get(0);
           return getMatch(
             record: record,
             field: field,
-            isMatch: (recordValue) => _greaterThan(recordValue, value),
+            isMatch: (recordValue) {
+              if (value is DateTime) {
+                return _greaterThan(recordValue, value.millisecondsSinceEpoch);
+              } else {
+                return _greaterThan(recordValue, value);
+              }
+            },
           );
         });
       // 大于等于
-      case SingleFilterOp.greaterThanOrEquals:
+      case api.SingleFilterOp.greaterThanOrEquals:
         return Filter.custom((record) {
           Object? value = filter.get(0);
           return getMatch(
             record: record,
             field: field,
-            isMatch: (recordValue) => _greaterThan(recordValue, value) || recordValue == value,
+            isMatch: (recordValue) {
+              if (value is DateTime) {
+                int intValue = value.millisecondsSinceEpoch;
+                return _greaterThan(recordValue, intValue) || recordValue == intValue;
+              } else {
+                return _greaterThan(recordValue, value) || recordValue == value;
+              }
+            },
           );
         });
       // 在列表中
-      case SingleFilterOp.inList:
+      case api.SingleFilterOp.inList:
         return Filter.custom((record) {
           List? value = filter.get(0) as List?;
           return getMatch(
@@ -206,7 +246,7 @@ class SembastConvertor extends Convertor {
           );
         });
       // 不在列表中
-      case SingleFilterOp.notInList:
+      case api.SingleFilterOp.notInList:
         return Filter.custom((record) {
           List? value = filter.get(0) as List?;
           return getMatch(
@@ -219,7 +259,7 @@ class SembastConvertor extends Convertor {
           );
         });
       // 匹配字符串
-      case SingleFilterOp.matches:
+      case api.SingleFilterOp.matches:
         return Filter.custom((record) {
           String? value = filter.get(0) as String?;
           return getMatch(
@@ -232,7 +272,7 @@ class SembastConvertor extends Convertor {
           );
         });
       // 时间段内
-      case SingleFilterOp.between:
+      case api.SingleFilterOp.between:
         return Filter.custom((RecordSnapshot record) {
           return getMatch(
             record: record,
@@ -267,7 +307,7 @@ class SembastConvertor extends Convertor {
           );
         });
       // 包含全部
-      case SingleFilterOp.containsAll:
+      case api.SingleFilterOp.containsAll:
         return Filter.custom((record) {
           return getMatch(
             record: record,
@@ -286,7 +326,7 @@ class SembastConvertor extends Convertor {
             },
           );
         });
-      case SingleFilterOp.containsOne:
+      case api.SingleFilterOp.containsOne:
         return Filter.custom((RecordSnapshot record) {
           return getMatch(
             record: record,
@@ -310,13 +350,13 @@ class SembastConvertor extends Convertor {
     }
   }
 
-  Filter convertGroupFilter(GroupHgFilter filter) {
-    List<HgFilter> children = filter.children;
+  Filter convertGroupFilter(api.GroupFilter filter) {
+    List<api.Filter> children = filter.children;
     List<Filter> filters = [];
-    for (HgFilter child in children) {
+    for (api.Filter child in children) {
       filters.add(filterConvert(child));
     }
-    if (filter.op == GroupFilterOp.and) {
+    if (filter.op == api.GroupFilterOp.and) {
       return Filter.and(filters);
     } else {
       return Filter.or(filters);
@@ -324,7 +364,7 @@ class SembastConvertor extends Convertor {
   }
 
   @override
-  SortOrder sortConvert(HgSort sort) {
-    return SortOrder(sort.field, sort.op == SortOp.asc);
+  SortOrder sortConvert(api.Sort sort) {
+    return SortOrder(sort.field, sort.op == api.SortOp.asc);
   }
 }

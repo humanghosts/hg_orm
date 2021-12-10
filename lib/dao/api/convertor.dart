@@ -11,28 +11,28 @@ abstract class Convertor {
   const Convertor();
 
   /// filter转换为仓库特性过滤
-  Object filterConvert(HgFilter filter);
+  Object filterConvert(Filter filter);
 
   /// sort转换为仓库特型排序
-  Object sortConvert(HgSort sort);
+  Object sortConvert(Sort sort);
 
   /// model转换为仓库的数据类型
-  Object modelConvert(Model model, HgTransaction? tx, bool isLogicDelete, bool isCache) {
+  Object modelConvert(Model model, Transaction? tx, bool isLogicDelete, bool isCache) {
     return getModelValue(model, tx, isLogicDelete, isCache);
   }
 
   /// 仓库的数据类型转换为model类型，最好保证model是新的
-  Future<Model> convertToModel(Model model, Object? value, HgTransaction? tx, bool isLogicDelete, bool isCache) async {
+  Future<Model> convertToModel(Model model, Object? value, Transaction? tx, bool isLogicDelete, bool isCache) async {
     return await setModelValue(model, value, tx, isLogicDelete, isCache);
   }
 
   /// attribute的数据类型转换为仓库数据类型
-  Object? attributeConvert(Attribute attribute, HgTransaction? tx, bool isLogicDelete, bool isCache) {
+  Object? attributeConvert(Attribute attribute, Transaction? tx, bool isLogicDelete, bool isCache) {
     return getAttributeValue(attribute, tx, isLogicDelete, isCache);
   }
 
   /// 仓库的数据类型回设attribute的value,最好保证attribute是新的
-  Future<Attribute> convertToAttribute(Attribute attribute, Object? value, HgTransaction? tx, bool isLogicDelete, bool isCache) async {
+  Future<Attribute> convertToAttribute(Attribute attribute, Object? value, Transaction? tx, bool isLogicDelete, bool isCache) async {
     return await setAttributeValue(attribute, value, tx, isLogicDelete, isCache);
   }
 
@@ -45,7 +45,7 @@ abstract class Convertor {
   }
 
   /// 供其它类使用的方法
-  static Object getModelValue(Model model, HgTransaction? tx, bool isLogicDelete, bool isCache) {
+  static Object getModelValue(Model model, Transaction? tx, bool isLogicDelete, bool isCache) {
     Map<String, Object> map = <String, Object>{};
     for (Attribute attribute in model.attributes.list) {
       Object? value = getAttributeValue(attribute, tx, isLogicDelete, isCache);
@@ -58,7 +58,7 @@ abstract class Convertor {
   }
 
   /// 供其它类使用的方法
-  static Future<Model> setModelValue(Model model, Object? value, HgTransaction? tx, bool isLogicDelete, bool isCache) async {
+  static Future<Model> setModelValue(Model model, Object? value, Transaction? tx, bool isLogicDelete, bool isCache) async {
     if (null == value) {
       return model;
     }
@@ -73,7 +73,7 @@ abstract class Convertor {
   }
 
   /// 供其它类使用的方法
-  static Object? getAttributeValue(Attribute attribute, HgTransaction? tx, bool isLogicDelete, bool isCache) {
+  static Object? getAttributeValue(Attribute attribute, Transaction? tx, bool isLogicDelete, bool isCache) {
     // 属性为空
     if (attribute.isNull) return null;
     // 模型属性
@@ -132,7 +132,7 @@ abstract class Convertor {
   }
 
   /// 供其它类使用的方法
-  static Future<Attribute> setAttributeValue(Attribute attribute, Object? value, HgTransaction? tx, bool isLogicDelete, bool isCache) async {
+  static Future<Attribute> setAttributeValue(Attribute attribute, Object? value, Transaction? tx, bool isLogicDelete, bool isCache) async {
     if (null == value) {
       attribute.clear();
       return attribute;

@@ -6,27 +6,30 @@ import 'dao.dart';
 import 'filter.dart';
 
 /// 过滤条件的custom_value类型，用于model的attribute的value
-abstract class HgFilterValue implements CustomValue {
-  HgFilter? asFilter();
+abstract class FilterValue implements CustomValue {
+  Filter? asFilter();
 }
 
 /// 单个过滤条件
-class SingleHgFilterValue implements HgFilterValue {
-  SingleHgFilter? filter;
+class SingleFilterValue implements FilterValue {
+  SingleFilter? filter;
+
+  SingleFilterValue({this.filter});
 
   @override
   bool get isNull => null == filter;
 
   @override
-  void merge(CustomValue value) {
-    if (value is SingleHgFilterValue) {
+  SingleFilterValue merge(CustomValue value) {
+    if (value is SingleFilterValue) {
       filter = value.filter;
     }
+    return this;
   }
 
   @override
   Object? toMap() {
-    SingleHgFilter? filter = this.filter;
+    SingleFilter? filter = this.filter;
     if (null == filter) return null;
     List<Object> filterValueList = filter.value;
     List<Object> value = filterValueList;
@@ -79,9 +82,9 @@ class SingleHgFilterValue implements HgFilterValue {
   /// TODO 这里的fromMap要查数据，但是没有事务，可能是个隐患
   /// 事务定义在orm里面，fromMap定义在entity里面，使用fromMap都是基于超类的定义，事务暂时加不上
   @override
-  Future<void> fromMap(Object value) async {
+  Future<SingleFilterValue> fromMap(Object value) async {
     if (value is! Map) {
-      return;
+      return this;
     }
     // 字段
     String field = value["field"];
@@ -89,12 +92,12 @@ class SingleHgFilterValue implements HgFilterValue {
     String opSymbol = value["op"];
     SingleFilterOp op = SingleFilterOp.map[opSymbol]!;
     // 过滤器
-    SingleHgFilter filter = SingleHgFilter(field: field, op: op);
+    SingleFilter filter = SingleFilter(field: field, op: op);
     this.filter = filter;
     // 值列表
     List mapValueList = value["value"];
     if (mapValueList.isEmpty) {
-      return;
+      return this;
     }
     // 值类型
     String valueType = value["valueType"];
@@ -166,17 +169,18 @@ class SingleHgFilterValue implements HgFilterValue {
         }
       }
     }
+    return this;
   }
 
   @override
-  SingleHgFilterValue clone() {
-    SingleHgFilterValue newFilterValue = SingleHgFilterValue();
+  SingleFilterValue clone() {
+    SingleFilterValue newFilterValue = SingleFilterValue();
     newFilterValue.filter = filter?.clone();
     return newFilterValue;
   }
 
   @override
-  SingleHgFilter? asFilter() {
+  SingleFilter? asFilter() {
     return filter;
   }
 
@@ -190,27 +194,32 @@ class SingleHgFilterValue implements HgFilterValue {
 }
 
 /// 多个过滤条件
-class GroupHgFilterValue implements HgFilterValue {
+class GroupFilterValue implements FilterValue {
   GroupFilterOp op = GroupFilterOp.and;
-  final List<HgFilterValue> filters = [];
+  late List<FilterValue> filters;
+
+  GroupFilterValue({this.op = GroupFilterOp.and, List<FilterValue>? filters}) {
+    this.filters = filters ?? [];
+  }
 
   @override
   bool get isNull => filters.isEmpty;
 
   @override
-  void merge(CustomValue value) {
-    if (value is GroupHgFilterValue) {
+  GroupFilterValue merge(CustomValue value) {
+    if (value is GroupFilterValue) {
       op = value.op;
       filters.clear();
       filters.addAll(value.filters);
     }
+    return this;
   }
 
   @override
   Object? toMap() {
     if (filters.isEmpty) return null;
     List<Map> childrenMap = [];
-    for (HgFilterValue child in filters) {
+    for (FilterValue child in filters) {
       String type = child.runtimeType.toString();
       Object? value = child.toMap();
       if (value == null) {
@@ -228,9 +237,9 @@ class GroupHgFilterValue implements HgFilterValue {
   }
 
   @override
-  Future<void> fromMap(Object value) async {
+  Future<GroupFilterValue> fromMap(Object value) async {
     if (value is! Map) {
-      return;
+      return this;
     }
     String opSymbol = value["op"];
     op = GroupFilterOp.map[opSymbol]!;
@@ -239,27 +248,28 @@ class GroupHgFilterValue implements HgFilterValue {
     for (Map child in children) {
       String type = child["type"];
       Map value = child["value"] as Map;
-      HgFilterValue customValue = ConstructorCache.getByStr(type);
+      FilterValue customValue = ConstructorCache.getByStr(type);
       await customValue.fromMap(value);
       filters.add(customValue);
     }
+    return this;
   }
 
   @override
-  GroupHgFilterValue clone() {
-    GroupHgFilterValue newFilterValue = GroupHgFilterValue();
+  GroupFilterValue clone() {
+    GroupFilterValue newFilterValue = GroupFilterValue();
     newFilterValue.op = op;
-    for (HgFilterValue filter in filters) {
-      newFilterValue.filters.add(filter.clone() as HgFilterValue);
+    for (FilterValue filter in filters) {
+      newFilterValue.filters.add(filter.clone() as FilterValue);
     }
     return newFilterValue;
   }
 
   @override
-  GroupHgFilter? asFilter() {
-    GroupHgFilter groupFilter = GroupHgFilter(op: op);
-    for (HgFilterValue child in filters) {
-      HgFilter? filter = child.asFilter();
+  GroupFilter? asFilter() {
+    GroupFilter groupFilter = GroupFilter(op: op);
+    for (FilterValue child in filters) {
+      Filter? filter = child.asFilter();
       if (null != filter) {
         groupFilter.children.add(filter);
       }

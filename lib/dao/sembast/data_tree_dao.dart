@@ -1,16 +1,16 @@
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/context/export.dart';
-import 'package:hg_orm/dao/api/export.dart';
+import 'package:hg_orm/dao/api/export.dart' as api;
 import 'package:sembast/sembast.dart';
 
 import 'data_dao.dart';
 
 /// 树形公共的规范与实现
-class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> implements DataTreeDao<T> {
+class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> implements api.DataTreeDao<T> {
   SembastDataTreeDao({bool? isLogicDelete, bool? isCache}) : super(isLogicDelete: isLogicDelete, isCache: isCache);
 
   @override
-  Future<void> save(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> save(T model, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     // 子节点
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
@@ -25,7 +25,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   }
 
   @override
-  Future<void> remove(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache, bool isRemoveChildren = true}) async {
+  Future<void> remove(T model, {api.Transaction? tx, bool? isLogicDelete, bool? isCache, bool isRemoveChildren = true}) async {
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
       for (DataModel child in model.children.value) {
@@ -42,7 +42,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   /// 上级保存的下级惰性删除即可
   @override
   @override
-  Future<void> removeWhere(HgFilter filter, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> removeWhere(api.Filter filter, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     List removeIdList = [];
     await withTransaction(tx, (tx) async {
       List idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -75,7 +75,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
     }
   }
 
-  Future<List> _getTreeIdList(HgFilter filter, HgTransaction tx, {bool? isLogicDelete, bool? isCache}) async {
+  Future<List> _getTreeIdList(api.Filter filter, api.Transaction tx, {bool? isLogicDelete, bool? isCache}) async {
     // 查询要删除的模型,这理不需要翻译，不用使用find方法
     List<RecordSnapshot> recordList = await store.find(tx.getTx(), finder: Finder(filter: convertor.filterConvert(filter)));
     // 没有要删除的返回空
@@ -101,7 +101,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   }
 
   @override
-  Future<void> recover(T model, {HgTransaction? tx, bool? isCache}) async {
+  Future<void> recover(T model, {api.Transaction? tx, bool? isCache}) async {
     List<T> children = <T>[];
     if (model.children.value.isNotEmpty) {
       for (DataModel child in model.children.value) {
@@ -116,7 +116,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
 
   /// 恢复的时候同时恢复下级
   @override
-  Future<void> recoverWhere(HgFilter filter, {HgTransaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<void> recoverWhere(api.Filter filter, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     List recoverIdList = [];
     await withTransaction(tx, (tx) async {
       List idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -145,9 +145,9 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   /// 先全查回来，然后组装成树
   @override
   Future<List<T>> findTree({
-    HgTransaction? tx,
-    HgFilter? filter,
-    List<HgSort>? sorts,
+    api.Transaction? tx,
+    api.Filter? filter,
+    List<api.Sort>? sorts,
     int? limit,
     int? offset,
     Boundary? start,

@@ -23,21 +23,21 @@ abstract class Dao<T extends Model> {
     _convertor = convertor;
   }
 
-  Future<void> transaction(Future<void> Function(HgTransaction tx) action);
+  Future<void> transaction(Future<void> Function(Transaction tx) action);
 
-  Future<void> withTransaction(HgTransaction? tx, Future<void> Function(HgTransaction tx) action);
+  Future<void> withTransaction(Transaction? tx, Future<void> Function(Transaction tx) action);
 
   /// 保存
-  Future<void> save(T model, {HgTransaction? tx});
+  Future<void> save(T model, {Transaction? tx});
 
   /// 更新
-  Future<void> update(String id, Map<String, Object?> value, {HgTransaction? tx});
+  Future<void> update(String id, Map<String, Object?> value, {Transaction? tx});
 
   /// 删除
-  Future<void> remove(T model, {HgTransaction? tx});
+  Future<void> remove(T model, {Transaction? tx});
 
   /// 查询
-  Future<List<T>> find({HgTransaction? tx});
+  Future<List<T>> find({Transaction? tx});
 }
 
 /// 用于数据模型(通过id作为数据标识)的dao基类
@@ -62,55 +62,55 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
 
   /// 保存
   @override
-  Future<void> save(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> save(T model, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 存储列表
-  Future<void> saveList(List<T> modelList, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> saveList(List<T> modelList, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 更新
   @override
-  Future<void> update(String id, Map<String, Object?> value, {HgTransaction? tx});
+  Future<void> update(String id, Map<String, Object?> value, {Transaction? tx});
 
   /// 更新列表
-  Future<void> updateList(List<String> idList, Map<String, Object?> value, {HgTransaction? tx});
+  Future<void> updateList(List<String> idList, Map<String, Object?> value, {Transaction? tx});
 
   /// 条件更新
-  Future<void> updateWhere(HgFilter filter, Map<String, Object?> value, {HgTransaction? tx});
+  Future<void> updateWhere(Filter filter, Map<String, Object?> value, {Transaction? tx});
 
   /// 删除
   @override
-  Future<void> remove(T model, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> remove(T model, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 移除列表
-  Future<void> removeList(List<T> modelList, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> removeList(List<T> modelList, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 条件删除
-  Future<void> removeWhere(HgFilter filter, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<void> removeWhere(Filter filter, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 删除恢复
-  Future<void> recover(T model, {HgTransaction? tx, bool? isCache});
+  Future<void> recover(T model, {Transaction? tx, bool? isCache});
 
   /// 恢复列表
-  Future<void> recoverList(List<T> modelList, {HgTransaction? tx, bool? isCache});
+  Future<void> recoverList(List<T> modelList, {Transaction? tx, bool? isCache});
 
   /// 条件恢复
-  Future<void> recoverWhere(HgFilter filter, {HgTransaction? tx, bool? isCache});
+  Future<void> recoverWhere(Filter filter, {Transaction? tx, bool? isCache});
 
   /// 查找
   @override
-  Future<List<T>> find({HgFilter? filter, List<HgSort>? sorts, HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<List<T>> find({Filter? filter, List<Sort>? sorts, Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 查找符合条件的第一个
-  Future<T?> findFirst({HgFilter? filter, List<HgSort>? sorts, HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<T?> findFirst({Filter? filter, List<Sort>? sorts, Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 通过ID查询
-  Future<T?> findByID(String id, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<T?> findByID(String id, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 通过ID查询
-  Future<List<T>> findByIDList(List<String> id, {HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<List<T>> findByIDList(List<String> id, {Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 计数
-  Future<int> count({HgFilter? filter, HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<int> count({Filter? filter, Transaction? tx, bool? isLogicDelete, bool? isCache});
 }
 
 abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
@@ -122,7 +122,7 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
         );
 
   /// 按树查找
-  Future<List<T>> findTree({HgFilter? filter, List<HgSort>? sorts, HgTransaction? tx, bool? isLogicDelete, bool? isCache});
+  Future<List<T>> findTree({Filter? filter, List<Sort>? sorts, Transaction? tx, bool? isLogicDelete, bool? isCache});
 
   /// 列表变树
   List<T> listToTree(List<T> modelList);

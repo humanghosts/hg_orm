@@ -1,9 +1,9 @@
-class HgTransaction {
+class Transaction {
   Object transaction;
 
-  HgTransaction(this.transaction);
+  Transaction(this.transaction);
 
-  static T getOr<T>(HgTransaction? tx, T defaultTx) {
+  static T getOr<T>(Transaction? tx, T defaultTx) {
     if (null == tx) {
       return defaultTx;
     }

@@ -1,8 +1,8 @@
-import 'package:hg_orm/dao/api/database_helper.dart';
+import 'package:hg_orm/dao/api/database.dart';
 import 'package:hg_orm/dao/export.dart';
 
 class DatabaseType {
-  final DatabaseHelper helper;
+  final Database helper;
 
   const DatabaseType(this.helper);
 

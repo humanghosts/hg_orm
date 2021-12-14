@@ -5,7 +5,7 @@ import 'package:hg_orm/dao/api/export.dart' as api;
 import 'package:sembast/sembast.dart';
 
 import 'convertor.dart';
-import 'database_helper.dart';
+import 'database.dart';
 
 /// 公共的规范与实现
 class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
@@ -13,7 +13,7 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   late StoreRef store;
 
   /// 获取数据库实例
-  late Database dataBase;
+  Database get dataBase => SembastDatabaseHelper.database;
 
   /// 数据库地址
   late String _storeName;
@@ -21,7 +21,6 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   SembastSimpleDao() : super(convertor: const SembastConvertor()) {
     _storeName = T.toString();
     store = stringMapStoreFactory.store("simple");
-    dataBase = SembastDatabaseHelper.database;
   }
 
   @override

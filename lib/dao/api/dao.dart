@@ -52,8 +52,8 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
       : super(
           convertor: convertor,
         ) {
-    _isLogicDelete = isLogicDelete ?? DataBaseStarter.isLogicDelete;
-    _isCache = isCache ?? DataBaseStarter.isCache;
+    _isLogicDelete = isLogicDelete ?? DatabaseHelper.isLogicDelete;
+    _isCache = isCache ?? DatabaseHelper.isCache;
   }
 
   bool get isCache => _isCache;

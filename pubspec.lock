@@ -94,7 +94,7 @@ packages:
       name: hg_entity
       url: "http://localhost:8080"
     source: hosted
-    version: "0.0.64"
+    version: "0.0.65"
   lints:
     dependency: transitive
     description:
@@ -150,14 +150,14 @@ packages:
       name: path_provider_linux
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.1.0"
+    version: "2.1.4"
   path_provider_macos:
     dependency: transitive
     description:
       name: path_provider_macos
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.0.2"
+    version: "2.0.4"
   path_provider_platform_interface:
     dependency: transitive
     description:
@@ -171,14 +171,14 @@ packages:
       name: path_provider_windows
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.0.3"
+    version: "2.0.4"
   platform:
     dependency: transitive
     description:
       name: platform
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "3.0.2"
+    version: "3.1.0"
   plugin_platform_interface:
     dependency: transitive
     description:
@@ -192,7 +192,7 @@ packages:
       name: process
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "4.2.3"
+    version: "4.2.4"
   sembast:
     dependency: "direct main"
     description:
@@ -281,7 +281,7 @@ packages:
       name: win32
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "2.2.9"
+    version: "2.3.1"
   xdg_directories:
     dependency: transitive
     description:

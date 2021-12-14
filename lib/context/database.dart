@@ -1,11 +1,12 @@
 import 'package:hg_entity/hg_entity.dart';
+import 'package:hg_orm/context/data_model_cache.dart';
 import 'package:hg_orm/dao/database_type.dart';
 
 import '../dao/api/entities.dart';
 import '../dao/api/export.dart';
 import 'dao_cache.dart';
 
-class DataBaseStarter {
+class DatabaseHelper {
   static bool isCache = true;
   static bool isLogicDelete = true;
 
@@ -20,8 +21,8 @@ class DataBaseStarter {
     Map<Type, Dao> Function()? getDaoMap,
     DatabaseListener? listener,
   }) async {
-    DataBaseStarter.isCache = isCache ?? true;
-    DataBaseStarter.isLogicDelete = isLogicDelete ?? true;
+    DatabaseHelper.isCache = isCache ?? true;
+    DatabaseHelper.isLogicDelete = isLogicDelete ?? true;
     // 打开数据库
     await databaseType.helper.open(path);
     // 监听执行
@@ -43,6 +44,20 @@ class DataBaseStarter {
     // 监听执行
     await listener?.afterDaoRegister?.call();
   }
+
+  /// 刷新数据库
+  static Future<void> refresh({
+    required String path,
+    required DatabaseType databaseType,
+    DatabaseListener? listener,
+  }) async {
+    // 刷新数据库
+    await databaseType.helper.refresh(path);
+    // 清空缓存
+    DataModelCache.clear();
+    // 监听执行
+    await listener?.afterDatabaseRefresh?.call();
+  }
 }
 
 /// 监听数据库事件
@@ -55,6 +70,9 @@ class DatabaseListener {
 
   /// 注册model类型后事件，一般用于插入数据
   Future<void> Function()? afterModelRegister;
+
+  /// 刷新数据库后事件
+  Future<void> Function()? afterDatabaseRefresh;
 
   DatabaseListener({
     this.afterDatabaseOpen,

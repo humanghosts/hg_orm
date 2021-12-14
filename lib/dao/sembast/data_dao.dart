@@ -7,14 +7,14 @@ import 'package:hg_orm/dao/api/export.dart' as api;
 import 'package:sembast/sembast.dart';
 
 import 'convertor.dart';
-import 'database_helper.dart';
+import 'database.dart';
 
 class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   /// 获取实体所在存储库的名称
   late StoreRef store;
 
   /// 获取数据库实例
-  late Database dataBase;
+  Database get dataBase => SembastDatabaseHelper.database;
 
   @override
   SembastConvertor get convertor => super.convertor as SembastConvertor;
@@ -26,7 +26,6 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
           convertor: const SembastConvertor(),
         ) {
     store = stringMapStoreFactory.store(T.toString());
-    dataBase = SembastDatabaseHelper.database;
   }
 
   @override

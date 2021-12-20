@@ -18,7 +18,7 @@ class SortValue implements CustomValue {
   }
 
   @override
-  Object? toMap() {
+  Future<Object?> toMap({Map<String, Object?>? args}) async {
     Sort? sort = this.sort;
     if (null == sort) return null;
     return {
@@ -28,7 +28,7 @@ class SortValue implements CustomValue {
   }
 
   @override
-  Future<SortValue> fromMap(Object value) async {
+  Future<SortValue> fromMap(Object? value, {Map<String, Object?>? args}) async {
     if (value is Map) {
       sort = Sort(
         field: value["field"],
@@ -39,17 +39,8 @@ class SortValue implements CustomValue {
   }
 
   @override
-  SortValue clone() {
-    SortValue sortValue = SortValue();
-    Object? map = toMap();
-    if (null != map) {
-      sortValue.fromMap(map);
-    }
-    return sortValue;
-  }
+  SortValue clone() => SortValue(sort: sort?.clone());
 
   @override
-  String toString() {
-    return sort.toString();
-  }
+  String toString() => sort.toString();
 }

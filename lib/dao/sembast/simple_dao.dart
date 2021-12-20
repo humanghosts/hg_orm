@@ -4,7 +4,7 @@ import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/dao/api/export.dart' as api;
 import 'package:sembast/sembast.dart';
 
-import 'convertor.dart';
+import 'convertors.dart';
 import 'database.dart';
 
 /// 公共的规范与实现
@@ -18,13 +18,13 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   /// 数据库地址
   late String _storeName;
 
-  SembastSimpleDao() : super(convertor: const SembastConvertor()) {
+  SembastSimpleDao() : super(convertors: SembastConvertors.instance) {
     _storeName = T.toString();
     store = stringMapStoreFactory.store("simple");
   }
 
   @override
-  SembastConvertor get convertor => super.convertor as SembastConvertor;
+  SembastConvertors get convertors => super.convertors as SembastConvertors;
 
   @override
   Future<void> transaction(Future<void> Function(api.Transaction tx) action) async {
@@ -64,14 +64,18 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   }
 
   Future<void> _insert(T model, {api.Transaction? tx}) async {
-    await store.record(_storeName).add(api.Transaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, true, true));
+    await store
+        .record(_storeName)
+        .add(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: true, isCache: true));
   }
 
   Future<void> _update(T model, {api.Transaction? tx}) async {
     /// 这里用put不用update的原因是：
     /// sembast的update是foreach map的update，如果以前有key，现在没有key，
     /// 无法清空数据，所以就直接替换了
-    await store.record(_storeName).put(api.Transaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, true, true));
+    await store
+        .record(_storeName)
+        .put(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: true, isCache: true));
   }
 
   Future<void> _delete(T model, {api.Transaction? tx}) async {
@@ -99,7 +103,7 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
       }
       Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
       T t = ConstructorCache.get(T);
-      await convertor.convertToModel(t, map, tx, true, true);
+      await convertors.modelConvertor.getModelByModel(t, map, tx: tx, isLogicDelete: true, isCache: true);
       t.state = States.query;
       modelList.add(t);
     });

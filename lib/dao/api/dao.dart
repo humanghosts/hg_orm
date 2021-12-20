@@ -1,8 +1,5 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/context/database.dart';
-import 'package:hg_orm/dao/api/export.dart';
-
-import 'transaction.dart';
+import 'package:hg_orm/hg_orm.dart';
 
 /// dao的基类
 abstract class Dao<T extends Model> {
@@ -10,21 +7,23 @@ abstract class Dao<T extends Model> {
   late final T _sampleModel;
 
   /// 类型转换
-  late final Convertor _convertor;
+  late final Convertors _convertors;
 
   /// 样本模型
   T get sampleModel => _sampleModel;
 
   /// 转换器
-  Convertor get convertor => _convertor;
+  Convertors get convertors => _convertors;
 
-  Dao({required Convertor convertor}) {
+  Dao({required Convertors convertors}) {
     _sampleModel = ConstructorCache.get(T);
-    _convertor = convertor;
+    _convertors = convertors;
   }
 
+  /// 新建一个事务
   Future<void> transaction(Future<void> Function(Transaction tx) action);
 
+  /// 有事务使用当前事务，没有事务新建一个事务
   Future<void> withTransaction(Transaction? tx, Future<void> Function(Transaction tx) action);
 
   /// 保存
@@ -48,10 +47,11 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
   /// 是否开启逻辑删除
   late final bool _isLogicDelete;
 
-  DataDao({bool? isLogicDelete, bool? isCache, required Convertor convertor})
-      : super(
-          convertor: convertor,
-        ) {
+  DataDao({
+    bool? isLogicDelete,
+    bool? isCache,
+    required Convertors convertors,
+  }) : super(convertors: convertors) {
     _isLogicDelete = isLogicDelete ?? DatabaseHelper.isLogicDelete;
     _isCache = isCache ?? DatabaseHelper.isCache;
   }
@@ -114,11 +114,14 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
 }
 
 abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
-  DataTreeDao({bool? isLogicDelete, bool? isCache, required Convertor convertor})
-      : super(
+  DataTreeDao({
+    bool? isLogicDelete,
+    bool? isCache,
+    required Convertors convertors,
+  }) : super(
           isLogicDelete: isLogicDelete,
           isCache: isCache,
-          convertor: convertor,
+          convertors: convertors,
         );
 
   /// 按树查找
@@ -130,5 +133,5 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
 
 /// 用于普通模型(只有一个模型)的dao
 abstract class SimpleDao<T extends SimpleModel> extends Dao<T> {
-  SimpleDao({bool? isLogicDelete, bool? isCache, required Convertor convertor}) : super(convertor: convertor);
+  SimpleDao({bool? isLogicDelete, bool? isCache, required Convertors convertors}) : super(convertors: convertors);
 }

@@ -58,8 +58,8 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
             tx.getTx(),
             {
               sampleModel.isDelete.name: true,
-              sampleModel.deleteTime.name: convertor.dateTimeConvert(DateTime.now()),
-              sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+              sampleModel.deleteTime.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+              sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
             },
             finder: finder);
       } else {
@@ -77,7 +77,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
 
   Future<List> _getTreeIdList(api.Filter filter, api.Transaction tx, {bool? isLogicDelete, bool? isCache}) async {
     // 查询要删除的模型,这理不需要翻译，不用使用find方法
-    List<RecordSnapshot> recordList = await store.find(tx.getTx(), finder: Finder(filter: convertor.filterConvert(filter)));
+    List<RecordSnapshot> recordList = await store.find(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter)));
     // 没有要删除的返回空
     if (recordList.isEmpty) {
       return [];
@@ -130,7 +130,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
           {
             sampleModel.isDelete.name: false,
             sampleModel.deleteTime.name: null,
-            sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+            sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
           },
           finder: finder);
       recoverIdList = idList;

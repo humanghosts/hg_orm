@@ -2,8 +2,8 @@ import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/context/data_model_cache.dart';
 import 'package:hg_orm/dao/database_type.dart';
 
-import '../dao/api/entities.dart';
 import '../dao/api/export.dart';
+import '../dao/entity/entities.dart';
 import 'dao_cache.dart';
 
 class DatabaseHelper {

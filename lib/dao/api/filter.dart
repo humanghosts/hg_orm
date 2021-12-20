@@ -4,6 +4,17 @@ abstract class Filter {
   Filter clone();
 }
 
+/// 过滤条件操作符的抽象
+abstract class FilterOp {
+  /// 操作服名称
+  final String name;
+
+  /// 操作服符号
+  final String value;
+
+  const FilterOp._(this.name, this.value);
+}
+
 /// 单个过滤条件
 /// 值为List类型，用于适配不同操作符的元素个数
 /// 如between操作服，操作元素是两个，分别放在值的第0位和第1位，
@@ -154,10 +165,10 @@ class SingleFilter extends Filter {
     _valueType = null;
   }
 
+  /// 这是浅克隆
   @override
   SingleFilter clone() {
     SingleFilter newSingleFilter = SingleFilter(field: field, op: op);
-    // TODO 这是浅克隆
     newSingleFilter._value.addAll(value);
     newSingleFilter._valueType = _valueType;
     return newSingleFilter;
@@ -165,7 +176,7 @@ class SingleFilter extends Filter {
 
   @override
   String toString() {
-    return "$field${op.symbol}$_value($valueType)";
+    return "$field${op.value}$_value($valueType)";
   }
 }
 
@@ -206,27 +217,16 @@ class GroupFilter extends Filter {
   @override
   String toString() {
     if (children.isEmpty) {
-      return "${op.title}:[]";
+      return "${op.name}:[]";
     }
     StringBuffer sb = StringBuffer();
-    sb.writeln("${op.title}:[");
+    sb.writeln("${op.name}:[");
     for (var child in children) {
       sb.writeln("  ${child.toString()},");
     }
     sb.write("]");
     return sb.toString();
   }
-}
-
-/// 过滤条件操作符的抽象
-abstract class FilterOp {
-  /// 操作服名称
-  final String title;
-
-  /// 操作服符号
-  final String symbol;
-
-  const FilterOp._(this.title, this.symbol);
 }
 
 /// 添加操作符步骤

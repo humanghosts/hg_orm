@@ -6,7 +6,7 @@ import 'package:hg_orm/context/export.dart';
 import 'package:hg_orm/dao/api/export.dart' as api;
 import 'package:sembast/sembast.dart';
 
-import 'convertor.dart';
+import 'convertors.dart';
 import 'database.dart';
 
 class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
@@ -17,13 +17,13 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   Database get dataBase => SembastDatabaseHelper.database;
 
   @override
-  SembastConvertor get convertor => super.convertor as SembastConvertor;
+  SembastConvertors get convertors => super.convertors as SembastConvertors;
 
   SembastDataDao({bool? isLogicDelete, bool? isCache})
       : super(
           isLogicDelete: isLogicDelete,
           isCache: isCache,
-          convertor: const SembastConvertor(),
+          convertors: SembastConvertors.instance,
         ) {
     store = stringMapStoreFactory.store(T.toString());
   }
@@ -70,13 +70,17 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   Future<void> _insert(T model, {api.Transaction? tx}) async {
     model.createTime.value = DateTime.now();
     model.timestamp.value = DateTime.now();
-    await store.record(model.id.value).add(api.Transaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, isLogicDelete, isCache));
+    await store
+        .record(model.id.value)
+        .add(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache));
     DataModelCache.put(model);
   }
 
   Future<void> _update(T model, {api.Transaction? tx}) async {
     model.timestamp.value = DateTime.now();
-    await store.record(model.id.value).put(api.Transaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, isLogicDelete, isCache));
+    await store
+        .record(model.id.value)
+        .put(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache));
     DataModelCache.put(model);
   }
 
@@ -85,7 +89,9 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     if (logicDelete) {
       model.isDelete.value = true;
       model.deleteTime.value = DateTime.now();
-      await store.record(model.id.value).update(api.Transaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, logicDelete, isCache));
+      await store
+          .record(model.id.value)
+          .update(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: logicDelete, isCache: isCache));
       DataModelCache.remove(model.id.value);
       return;
     }
@@ -112,7 +118,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       api.Transaction.getOr(tx, dataBase),
       {
         ...value,
-        sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+        sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
       },
     );
     DataModelCache.remove(id);
@@ -135,7 +141,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   Future<void> updateWhere(api.Filter filter, Map<String, Object?> value, {api.Transaction? tx}) async {
     List removeIdList = [];
     await withTransaction(tx, (tx) async {
-      List idList = await store.findKeys(tx.getTx(), finder: Finder(filter: convertor.filterConvert(filter)));
+      List idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter)));
       if (idList.isEmpty) {
         return;
       }
@@ -146,7 +152,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
         tx.getTx(),
         {
           ...value,
-          sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+          sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
         },
         finder: finder,
       );
@@ -184,7 +190,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     await withTransaction(tx, (tx) async {
       bool logicDelete = isLogicDelete ?? this.isLogicDelete;
       // 删除前留下ID，便于后面删除缓存
-      List idList = await store.findKeys(tx.getTx(), finder: Finder(filter: convertor.filterConvert(filter)));
+      List idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter)));
       if (idList.isEmpty) {
         return;
       }
@@ -196,8 +202,8 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
           tx.getTx(),
           {
             sampleModel.isDelete.name: true,
-            sampleModel.deleteTime.name: convertor.dateTimeConvert(DateTime.now()),
-            sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+            sampleModel.deleteTime.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+            sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
           },
           finder: finder,
         );
@@ -222,7 +228,8 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     model.isDelete.value = false;
     model.deleteTime.value = null;
     // 直接替换数据
-    await store.record(model.id.value).put(api.Transaction.getOr(tx, dataBase), convertor.modelConvert(model, tx, false, isCache ?? this.isCache));
+    await store.record(model.id.value).put(
+        api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: false, isCache: isCache ?? this.isCache));
     model.state = States.query;
     DataModelCache.put(model);
   }
@@ -245,7 +252,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     List recoverIdList = [];
     await withTransaction(tx, (tx) async {
       // 删除前留下ID，便于后面删除缓存
-      List idList = await store.findKeys(tx.getTx(), finder: Finder(filter: convertor.filterConvert(filter)));
+      List idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter)));
       if (idList.isEmpty) {
         return;
       }
@@ -256,7 +263,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
         {
           sampleModel.isDelete.name: false,
           sampleModel.deleteTime.name: null,
-          sampleModel.timestamp.name: convertor.dateTimeConvert(DateTime.now()),
+          sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
         },
         finder: finder,
       );
@@ -309,9 +316,17 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   }) async {
     bool logicDelete = isLogicDelete ?? this.isLogicDelete;
     api.Filter? logicFilter = _getLogicFilter(filter, logicDelete);
+    List<SortOrder> sortOrders = [];
+    if (sorts != null) {
+      for (var one in sorts) {
+        SortOrder? oneSortOrder = await convertors.sortConvertor.to(one);
+        if (null == oneSortOrder) continue;
+        sortOrders.add(oneSortOrder);
+      }
+    }
     Finder finder = Finder(
-      filter: logicFilter == null ? null : convertor.filterConvert(logicFilter),
-      sortOrders: sorts?.map((sort) => convertor.sortConvert(sort)).toList(),
+      filter: await convertors.filterConvertor.to(logicFilter),
+      sortOrders: sortOrders,
       limit: limit,
       offset: offset,
       start: start,
@@ -354,9 +369,17 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   }) async {
     bool logicDelete = isLogicDelete ?? this.isLogicDelete;
     api.Filter? logicFilter = _getLogicFilter(filter, logicDelete);
+    List<SortOrder> sortOrders = [];
+    if (sorts != null) {
+      for (var one in sorts) {
+        SortOrder? oneSortOrder = await convertors.sortConvertor.to(one);
+        if (null == oneSortOrder) continue;
+        sortOrders.add(oneSortOrder);
+      }
+    }
     Finder finder = Finder(
-      filter: logicFilter == null ? null : convertor.filterConvert(logicFilter),
-      sortOrders: sorts?.map((sort) => convertor.sortConvert(sort)).toList(),
+      filter: await convertors.filterConvertor.to(logicFilter),
+      sortOrders: sortOrders,
       limit: limit,
       offset: offset,
       start: start,
@@ -374,7 +397,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   @override
   Future<int> count({api.Filter? filter, api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     api.Filter? logicFilter = _getLogicFilter(filter, isLogicDelete ?? this.isLogicDelete);
-    int num = await store.count(api.Transaction.getOr(tx, dataBase), filter: logicFilter == null ? null : convertor.filterConvert(logicFilter));
+    int num = await store.count(api.Transaction.getOr(tx, dataBase), filter: await convertors.filterConvertor.to(logicFilter));
     return num;
   }
 
@@ -434,7 +457,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       String id = map[sampleModel.id.name] as String;
       // 在merge中，fill之前，已经将mode放入undone缓存中，这里直接取即可
       DataModelCacheNode<T> cacheNode = DataModelCache.get(id)!;
-      await convertor.convertToModel(cacheNode.model, map, tx, isLogicDelete, isCache);
+      await convertors.modelConvertor.getModelByModel(cacheNode.model, map, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       // 转换完成的model缓存升级
       if (isCache) DataModelCache.levelUp(id);
       // 放入数据收集中

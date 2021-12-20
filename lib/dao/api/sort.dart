@@ -8,6 +8,8 @@ class Sort {
 
   Sort({required this.field, this.op = SortOp.asc});
 
+  Sort clone() => Sort(field: field, op: op);
+
   @override
   String toString() {
     return "$field:${op.title}";

@@ -13,7 +13,7 @@ class NumberAttributeConvertor<T extends num> extends AttributeConvertor<NumberA
   @override
   Future<NumberAttribute?> from(Object? value, {NumberAttribute? attribute, Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     if (null == attribute) return attribute;
-    if (!TypeUtil.isThisType(value, T)) return attribute;
+    if (value is! T?) return attribute;
     attribute.valueTypeless = value;
     return attribute;
   }
@@ -47,7 +47,7 @@ class NumberListAttributeConvertor<T extends num> extends AttributeConvertor<Num
     if (value is! List) return attribute;
     for (Object? one in value) {
       if (null == one) continue;
-      if (!TypeUtil.isThisType(one, T)) continue;
+      if (one is! T?) continue;
       attribute.append(one as T);
     }
     return attribute;

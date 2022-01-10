@@ -265,7 +265,7 @@ class SingleFilterOp extends FilterOp {
   static const SingleFilterOp greaterThan = SingleFilterOp._("大于", greaterThanSymbol);
   static const SingleFilterOp greaterThanOrEquals = SingleFilterOp._("大于等于", greaterThanOrEqualsSymbol);
   static const SingleFilterOp inList = SingleFilterOp._("在范围内", inListSymbol);
-  static const SingleFilterOp notInList = SingleFilterOp._("不在范围内", inListSymbol);
+  static const SingleFilterOp notInList = SingleFilterOp._("不在范围内", notInListSymbol);
   static const SingleFilterOp matches = SingleFilterOp._("匹配", matchesSymbol);
 
   /// 左闭右开区间

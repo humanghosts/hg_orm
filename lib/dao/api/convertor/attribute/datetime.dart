@@ -18,7 +18,7 @@ class DateTimeAttributeConvertor extends AttributeConvertor<DateTimeAttribute, i
     if (null == attribute) return attribute;
     attribute.clear();
     if (null == value) return attribute;
-    if (!TypeUtil.isThisType(value, int)) return attribute;
+    if (value is! int?) return attribute;
     attribute.value = getDateTime(value as int);
   }
 
@@ -51,7 +51,7 @@ class DateTimeListAttributeConvertor extends AttributeConvertor<DateTimeListAttr
     if (value is! List) return attribute;
     for (Object? one in value) {
       if (null == one) continue;
-      if (!TypeUtil.isThisType(one, int)) continue;
+      if (one is! int?) continue;
       attribute.append(getDateTime(one as int));
     }
     return attribute;

@@ -14,7 +14,7 @@ class BooleanAttributeConvertor extends AttributeConvertor<BooleanAttribute, boo
   Future<BooleanAttribute?> from(Object? value, {BooleanAttribute? attribute, Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     if (null == attribute) return attribute;
     attribute.clear();
-    if (!TypeUtil.isThisType(value, bool)) return attribute;
+    if (value is! bool?) return attribute;
     attribute.valueTypeless = value;
     return attribute;
   }
@@ -36,7 +36,7 @@ class BooleanListAttributeConvertor extends AttributeConvertor<BooleanListAttrib
     if (value is! List) return attribute;
     for (Object? one in value) {
       if (null == one) continue;
-      if (!TypeUtil.isThisType(one, bool)) continue;
+      if (one is! bool?) continue;
       attribute.append(one as bool);
     }
     return attribute;

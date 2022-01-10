@@ -1,14 +1,20 @@
 import 'package:hg_entity/hg_entity.dart';
 import 'package:hg_orm/context/data_model_cache.dart';
-import 'package:hg_orm/dao/database_type.dart';
+import 'package:hg_orm/context/database_type.dart';
 
 import '../dao/api/export.dart';
 import '../dao/entity/entities.dart';
 import 'dao_cache.dart';
 
 class DatabaseHelper {
+  /// 全局设置是否缓存
   static bool isCache = true;
+
+  /// 全局设置是否逻辑删除
   static bool isLogicDelete = true;
+
+  /// 当前数据库类型
+  static DatabaseType? currentDatabaseType;
 
   /// Type 必须是 ModelType
   /// 需要处理好constructor的依赖顺序，保证被依赖的先注册，因为构造方法中可能含有取值操作
@@ -23,8 +29,9 @@ class DatabaseHelper {
   }) async {
     DatabaseHelper.isCache = isCache ?? true;
     DatabaseHelper.isLogicDelete = isLogicDelete ?? true;
+    currentDatabaseType = databaseType;
     // 打开数据库
-    await databaseType.helper.open(path);
+    await databaseType.database.open(path);
     // 监听执行
     await listener?.afterDatabaseOpen?.call();
     // 注册hg_orm下的构造器
@@ -52,11 +59,29 @@ class DatabaseHelper {
     DatabaseListener? listener,
   }) async {
     // 刷新数据库
-    await databaseType.helper.refresh(path);
+    await databaseType.database.refresh(path);
     // 清空缓存
     DataModelCache.clear();
     // 监听执行
     await listener?.afterDatabaseRefresh?.call();
+  }
+
+  /// 开启一个事务
+  static Future<void> transaction(Future<void> Function(Transaction tx) action) async {
+    assert(currentDatabaseType != null, "使用事务前先打开数据库");
+    Database database = currentDatabaseType!.database;
+    return await database.transaction((tx) async {
+      await action(tx);
+    });
+  }
+
+  /// 有事务使用事务，没有事务新开一个事务
+  static Future<void> withTransaction(Transaction? tx, Future<void> Function(Transaction tx) action) async {
+    if (null == tx) {
+      await transaction(action);
+    } else {
+      await action(tx);
+    }
   }
 }
 

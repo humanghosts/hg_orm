@@ -83,7 +83,7 @@ class AttributeConvertors {
       }
       // 浮点类型
       if (attribute is FloatAttribute) {
-        return float.to(attribute, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        return await float.to(attribute, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       }
       return await number.to(attribute, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
     }

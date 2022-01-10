@@ -45,7 +45,7 @@ class SingleFilterValue implements FilterValue {
       // 遍历过滤器的值
       for (Object filterValue in filterValueList) {
         // 数据模型类型
-        if (TypeUtil.isThisType(obj, DataModel)) {
+        if (obj is DataModel?) {
           // 列表类型
           if (filterValue is List) {
             value.add(filterValue.map((e) => convertors.attributeConvertors.dataModel.getValue(e)).toList());
@@ -56,7 +56,7 @@ class SingleFilterValue implements FilterValue {
           }
         }
         // 简单模型类型
-        else if (TypeUtil.isThisType(obj, SimpleModel)) {
+        else if (obj is SimpleModel?) {
           // 列表类型
           if (filterValue is List) {
             List<Object> innerValueList = [];
@@ -84,7 +84,7 @@ class SingleFilterValue implements FilterValue {
           }
         }
         // 自定义值类型
-        else if (TypeUtil.isThisType(obj, CustomValue)) {
+        else if (obj is CustomValue?) {
           // 列表类型
           if (filterValue is List) {
             List customValueList = [];
@@ -147,7 +147,7 @@ class SingleFilterValue implements FilterValue {
       // 遍历所有值
       for (Object mapValue in mapValueList) {
         // 数据模型
-        if (TypeUtil.isThisType(obj, DataModel)) {
+        if (obj is DataModel?) {
           DataDao<DataModel> dao = DaoCache.getByStr(valueType) as DataDao<DataModel>;
           if (mapValue is List) {
             List<String> idList = mapValue.map((e) => e.toString()).toList();
@@ -161,7 +161,7 @@ class SingleFilterValue implements FilterValue {
           }
         }
         // 简单模型
-        else if (TypeUtil.isThisType(obj, SimpleModel)) {
+        else if (obj is SimpleModel?) {
           Type type = ConstructorCache.getType(valueType);
           if (mapValue is List) {
             List<SimpleModel> oneValueAsList = [];
@@ -186,7 +186,7 @@ class SingleFilterValue implements FilterValue {
           }
         }
         // 自定义值类型
-        else if (TypeUtil.isThisType(obj, CustomValue)) {
+        else if (obj is CustomValue?) {
           if (mapValue is List) {
             List<CustomValue> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {

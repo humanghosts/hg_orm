@@ -13,7 +13,7 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   late StoreRef store;
 
   /// 获取数据库实例
-  Database get dataBase => SembastDatabaseHelper.database;
+  Database get dataBase => SembastDatabase.database;
 
   /// 数据库地址
   late String _storeName;
@@ -36,9 +36,7 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   @override
   Future<void> withTransaction(api.Transaction? tx, Future<void> Function(api.Transaction tx) action) async {
     if (null == tx) {
-      await transaction((tx) async {
-        await action(tx);
-      });
+      await transaction(action);
     } else {
       await action(tx);
     }

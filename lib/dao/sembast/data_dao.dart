@@ -14,7 +14,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   late StoreRef store;
 
   /// 获取数据库实例
-  Database get dataBase => SembastDatabaseHelper.database;
+  Database get dataBase => SembastDatabase.database;
 
   @override
   SembastConvertors get convertors => super.convertors as SembastConvertors;
@@ -38,9 +38,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   @override
   Future<void> withTransaction(api.Transaction? tx, Future<void> Function(api.Transaction tx) action) async {
     if (null == tx) {
-      await transaction((tx) async {
-        await action(tx);
-      });
+      await transaction(action);
     } else {
       await action(tx);
     }

@@ -13,7 +13,7 @@ class StringAttributeConvertor extends AttributeConvertor<StringAttribute, Strin
   @override
   Future<StringAttribute?> from(Object? value, {StringAttribute? attribute, Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     if (null == attribute) return attribute;
-    if (!TypeUtil.isThisType(value, String)) return attribute;
+    if (value is! String?) return attribute;
     attribute.valueTypeless = value;
     return attribute;
   }
@@ -37,7 +37,7 @@ class StringListAttributeConvertor extends AttributeConvertor<StringListAttribut
     if (value is! List) return attribute;
     for (Object? one in value) {
       if (null == one) continue;
-      if (!TypeUtil.isThisType(one, String)) continue;
+      if (one is! String?) continue;
       attribute.append(one as String);
     }
     return attribute;

@@ -24,20 +24,20 @@ class ModelConvertors {
     return _instance!;
   }
 
-  Future<Object?> getValue(
+  Future<Map<String, Object?>?> getValue(
     Model? value, {
     Transaction? tx,
     bool? isLogicDelete,
     bool? isCache,
   }) async {
     if (null == value) return null;
-    if (TypeUtil.isThisType(value, DataModel)) {
-      if (TypeUtil.isThisType(value, DataTreeModel)) {
+    if (value is DataModel?) {
+      if (value is DataTreeModel?) {
         return await dataTreeModel.to(value, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       }
       return await dataModel.to(value, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
     }
-    if (TypeUtil.isThisType(value, SimpleModel)) {
+    if (value is SimpleModel?) {
       return await simpleModel.to(value, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
     }
     return await mod.to(value, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -51,7 +51,13 @@ class ModelConvertors {
     bool? isCache,
   }) async {
     if (null == modelType) return null;
-    return await getModelByModel(ConstructorCache.get(modelType), value, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+    return await getModelByModel(
+      ConstructorCache.get(modelType),
+      value,
+      tx: tx,
+      isLogicDelete: isLogicDelete,
+      isCache: isCache,
+    );
   }
 
   Future<Model?> getModelByModel(
@@ -64,27 +70,55 @@ class ModelConvertors {
     if (null == model) return null;
     if (null == value) return null;
     if (value is! Map) return null;
-    Map<String, Object> mapValue = value as Map<String, Object>;
-    if (TypeUtil.isThisType(value, DataModel)) {
-      if (TypeUtil.isThisType(value, DataTreeModel)) {
-        return await dataTreeModel.from(mapValue, modelType: model.runtimeType, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+    Map<String, Object?> mapValue = value as Map<String, Object?>;
+    if (model is DataModel?) {
+      if (model is DataTreeModel?) {
+        return await dataTreeModel.from(
+          mapValue,
+          modelType: model.runtimeType,
+          model: model as DataTreeModel,
+          tx: tx,
+          isLogicDelete: isLogicDelete,
+          isCache: isCache,
+        );
       }
-      return await dataModel.from(mapValue, modelType: model.runtimeType, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+      return await dataModel.from(
+        mapValue,
+        modelType: model.runtimeType,
+        model: model as DataModel,
+        tx: tx,
+        isLogicDelete: isLogicDelete,
+        isCache: isCache,
+      );
     }
-    if (TypeUtil.isThisType(value, SimpleModel)) {
-      return await simpleModel.from(mapValue, modelType: model.runtimeType, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+    if (model is SimpleModel?) {
+      return await simpleModel.from(
+        mapValue,
+        modelType: model.runtimeType,
+        model: model as SimpleModel,
+        tx: tx,
+        isLogicDelete: isLogicDelete,
+        isCache: isCache,
+      );
     }
-    return await mod.from(mapValue, modelType: model.runtimeType, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+    return await mod.from(
+      mapValue,
+      modelType: model.runtimeType,
+      model: model,
+      tx: tx,
+      isLogicDelete: isLogicDelete,
+      isCache: isCache,
+    );
   }
 }
 
-class ModelConvertor<F extends Model> extends Convertor<F, Map<String, Object>> {
+class ModelConvertor<F extends Model> extends Convertor<F, Map<String, Object?>> {
   ModelConvertors parent;
 
   ModelConvertor(this.parent);
 
   @override
-  Future<Map<String, Object>?> to(Model? value, {Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
+  Future<Map<String, Object?>?> to(Model? value, {Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     if (null == value) return null;
     Map<String, Object> map = <String, Object>{};
     for (Attribute attribute in value.attributes.list) {
@@ -102,16 +136,22 @@ class ModelConvertor<F extends Model> extends Convertor<F, Map<String, Object>> 
 
   @override
   Future<F?> from(
-    Map<String, Object>? value, {
+    Map<String, Object?>? value, {
     Type? modelType,
+    F? model,
     Transaction? tx,
     bool? isLogicDelete,
     bool? isCache,
   }) async {
     if (null == value) return null;
-    if (null == modelType) return null;
-    F model = ConstructorCache.get(modelType);
-    for (Attribute attribute in model.attributes.list) {
+    if (null == modelType && null == model) return null;
+    F realModel;
+    if (null == model) {
+      realModel = ConstructorCache.get(modelType!);
+    } else {
+      realModel = model;
+    }
+    for (Attribute attribute in realModel.attributes.list) {
       String attributeName = attribute.name;
       Object? attributeValue = value[attributeName];
       await parent.attributeConvertors.getAttribute(
@@ -122,7 +162,7 @@ class ModelConvertor<F extends Model> extends Convertor<F, Map<String, Object>> 
         isCache: isCache,
       );
     }
-    return model;
+    return realModel;
   }
 }
 

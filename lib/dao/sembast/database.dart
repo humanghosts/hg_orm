@@ -6,13 +6,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
 
-class SembastDatabaseHelper extends api.Database {
+class SembastDatabase extends api.Database {
   /// 数据库
   static Database? _database;
 
   /// 获取数据库
   static Database get database {
-    assert(_database != null);
+    assert(_database != null, "先打开数据库");
     return _database!;
   }
 
@@ -28,11 +28,12 @@ class SembastDatabaseHelper extends api.Database {
     final fullPath = join(appDocumentDir.path, path);
     // 通过绝对路径打开数据库
     _database = await databaseFactoryIo.openDatabase(fullPath);
-    log("sembast database open success!");
+    log("sembast数据库打开成功");
   }
 
   @override
   Future<void> close(String path) async {
+    // 关闭数据库就不需要非得数据库打开了
     await _database?.close();
   }
 
@@ -40,5 +41,21 @@ class SembastDatabaseHelper extends api.Database {
   Future<void> refresh(String path) async {
     await close(path);
     await open(path);
+  }
+
+  @override
+  Future<void> transaction(Future<void> Function(api.Transaction tx) action) async {
+    return await database.transaction((tx) async {
+      await action(api.Transaction(tx));
+    });
+  }
+
+  @override
+  Future<void> withTransaction(api.Transaction? tx, Future<void> Function(api.Transaction tx) action) async {
+    if (null == tx) {
+      await transaction(action);
+    } else {
+      await action(tx);
+    }
   }
 }

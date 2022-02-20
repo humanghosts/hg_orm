@@ -124,6 +124,10 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
           convertors: convertors,
         );
 
+  /// [isRemoveChildren] 指是否同时删除子事件
+  @override
+  Future<void> remove(T model, {Transaction? tx, bool? isLogicDelete, bool? isCache, bool isRemoveChildren = true});
+
   /// 按树查找
   Future<List<T>> findTree({Filter? filter, List<Sort>? sorts, Transaction? tx, bool? isLogicDelete, bool? isCache});
 

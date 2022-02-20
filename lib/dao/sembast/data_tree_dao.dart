@@ -43,9 +43,9 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   @override
   @override
   Future<void> removeWhere(api.Filter filter, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
-    List removeIdList = [];
+    List<String> removeIdList = [];
     await withTransaction(tx, (tx) async {
-      List idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache);
+      List<String> idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache) as List<String>;
       if (idList.isEmpty) {
         return;
       }
@@ -71,7 +71,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
 
     // 移除缓存
     for (var id in removeIdList) {
-      DataModelCache.remove(id as String);
+      DataModelCache.remove(id);
     }
   }
 
@@ -82,11 +82,11 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
     if (recordList.isEmpty) {
       return [];
     }
-    List idList = [];
+    List<String> idList = [];
     List<Filter> filters = [];
     for (RecordSnapshot record in recordList) {
       Map<String, Object?> map = record.value as Map<String, Object?>;
-      idList.add(map[sampleModel.id.name]);
+      idList.add(map[sampleModel.id.name] as String);
       // 全路径 肯定存在，不存在就算了
       Object? fullPathValue = map[sampleModel.fullPath.name];
       if (null == fullPathValue) {
@@ -117,9 +117,9 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
   /// 恢复的时候同时恢复下级
   @override
   Future<void> recoverWhere(api.Filter filter, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
-    List recoverIdList = [];
+    List<String> recoverIdList = [];
     await withTransaction(tx, (tx) async {
-      List idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache);
+      List<String> idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache) as List<String>;
       if (idList.isEmpty) {
         return;
       }
@@ -137,7 +137,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
     });
     // 按照同样的条件查询一下id，防止缓存和数据库不一致
     for (var id in recoverIdList) {
-      DataModelCache.remove(id as String);
+      DataModelCache.remove(id);
     }
   }
 

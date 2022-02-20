@@ -1,6 +1,6 @@
 name: hg_orm
 description: orm package
-version: 0.1.10
+version: 0.1.20
 publish_to: http://localhost:8080
 homepage: https://github.com/humanghosts/hg_orm
 
@@ -16,9 +16,9 @@ dependencies:
     hosted:
       name: hg_entity
       url: http://localhost:8080
-    version: ^0.1.4
-  sembast: ^3.1.1+1
-  path_provider: ^2.0.8
+    version: ^0.1.9
+  sembast: ^3.1.2
+  path_provider: ^2.0.9
   path: ^1.8.0
 
 dev_dependencies:

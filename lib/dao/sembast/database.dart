@@ -6,9 +6,14 @@ import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
 
+import 'kv.dart';
+
 class SembastDatabase extends api.Database {
   /// 数据库
   static Database? _database;
+
+  /// kv数据库
+  static SembastKV? _kv;
 
   /// 获取数据库
   static Database get database {
@@ -30,6 +35,16 @@ class SembastDatabase extends api.Database {
     _database = await databaseFactoryIo.openDatabase(fullPath);
     log("sembast数据库打开成功");
   }
+
+  @override
+  Future<void> openKV() async {
+    if (null == _database) throw "先打开数据库";
+    _kv = SembastKV();
+    await _kv!.init();
+  }
+
+  @override
+  api.KV get kv => _kv!;
 
   @override
   Future<void> close(String path) async {

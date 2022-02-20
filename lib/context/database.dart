@@ -1,10 +1,10 @@
 import 'package:hg_entity/hg_entity.dart';
-import 'package:hg_orm/context/data_model_cache.dart';
 import 'package:hg_orm/context/database_type.dart';
 
 import '../dao/api/export.dart';
 import '../dao/entity/entities.dart';
 import 'dao_cache.dart';
+import 'data_model_cache.dart';
 
 class DatabaseHelper {
   /// 全局设置是否缓存
@@ -32,6 +32,7 @@ class DatabaseHelper {
     currentDatabaseType = databaseType;
     // 打开数据库
     await databaseType.database.open(path);
+    await databaseType.database.openKV();
     // 监听执行
     await listener?.afterDatabaseOpen?.call();
     // 注册hg_orm下的构造器
@@ -64,6 +65,12 @@ class DatabaseHelper {
     DataModelCache.clear();
     // 监听执行
     await listener?.afterDatabaseRefresh?.call();
+  }
+
+  /// 获取键值对数据库
+  static KV get kv {
+    assert(currentDatabaseType != null, "使用事务前先打开数据库");
+    return currentDatabaseType!.database.kv;
   }
 
   /// 开启一个事务

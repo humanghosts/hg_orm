@@ -1,9 +1,15 @@
-import 'transaction.dart';
+import 'package:hg_orm/dao/api/export.dart';
 
 /// 数据库处理类
 abstract class Database {
   /// db专属，打开数据库
   Future<void> open(String path);
+
+  /// 打开kv数据库
+  Future<void> openKV();
+
+  /// 获取kv数据库
+  KV get kv;
 
   /// 关闭数据库
   Future<void> close(String path);

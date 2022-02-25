@@ -68,7 +68,7 @@ class CustomListAttributeConvertor extends AttributeConvertor<CustomListAttribut
         "isLogicDelete": isLogicDelete,
         "isCache": isCache,
       });
-      attribute.append(customValue);
+      attribute.add(customValue);
     }
     return attribute;
   }

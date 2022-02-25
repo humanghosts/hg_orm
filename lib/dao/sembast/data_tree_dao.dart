@@ -112,6 +112,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       await recoverList(children, tx: tx, isCache: isCache);
       await super.recover(model, tx: tx, isCache: isCache);
     });
+    model.state = States.update;
   }
 
   /// 恢复的时候同时恢复下级
@@ -120,9 +121,7 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
     List<String> recoverIdList = [];
     await withTransaction(tx, (tx) async {
       List<String> idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete, isCache: isCache) as List<String>;
-      if (idList.isEmpty) {
-        return;
-      }
+      if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
       Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
       await store.update(

@@ -38,7 +38,7 @@ class StringListAttributeConvertor extends AttributeConvertor<StringListAttribut
     for (Object? one in value) {
       if (null == one) continue;
       if (one is! String?) continue;
-      attribute.append(one as String);
+      attribute.add(one as String);
     }
     return attribute;
   }

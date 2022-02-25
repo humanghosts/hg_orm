@@ -305,6 +305,45 @@ class SembastFilterConvertors extends api.FilterConvertor<Filter> {
             },
           );
         });
+      // 字符串不匹配
+      case api.SingleFilterOp.notMatches:
+        return Filter.custom((record) {
+          String? value = filter.get(0) as String?;
+          return getMatch(
+            record: record,
+            field: field,
+            isMatch: (recordValue) {
+              if (null == value) return true;
+              return !(RegExp(value).hasMatch(recordValue.toString()));
+            },
+          );
+        });
+      // 匹配字符串开头
+      case api.SingleFilterOp.matchesStart:
+        return Filter.custom((record) {
+          String? value = filter.get(0) as String?;
+          return getMatch(
+            record: record,
+            field: field,
+            isMatch: (recordValue) {
+              if (null == value) return false;
+              return recordValue.toString().startsWith(value);
+            },
+          );
+        });
+      // 不匹配字符串开头
+      case api.SingleFilterOp.notMatchesStart:
+        return Filter.custom((record) {
+          String? value = filter.get(0) as String?;
+          return getMatch(
+            record: record,
+            field: field,
+            isMatch: (recordValue) {
+              if (null == value) return true;
+              return !recordValue.toString().startsWith(value);
+            },
+          );
+        });
       // 时间段内
       case api.SingleFilterOp.between:
         return Filter.custom((RecordSnapshot record) {

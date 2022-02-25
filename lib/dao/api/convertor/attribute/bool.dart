@@ -37,7 +37,7 @@ class BooleanListAttributeConvertor extends AttributeConvertor<BooleanListAttrib
     for (Object? one in value) {
       if (null == one) continue;
       if (one is! bool?) continue;
-      attribute.append(one as bool);
+      attribute.add(one as bool);
     }
     return attribute;
   }

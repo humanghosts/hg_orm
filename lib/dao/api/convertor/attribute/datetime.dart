@@ -20,6 +20,7 @@ class DateTimeAttributeConvertor extends AttributeConvertor<DateTimeAttribute, i
     if (null == value) return attribute;
     if (value is! int?) return attribute;
     attribute.value = getDateTime(value as int);
+    return attribute;
   }
 
   /// 转换时间类型
@@ -52,7 +53,7 @@ class DateTimeListAttributeConvertor extends AttributeConvertor<DateTimeListAttr
     for (Object? one in value) {
       if (null == one) continue;
       if (one is! int?) continue;
-      attribute.append(getDateTime(one as int));
+      attribute.add(getDateTime(one as int));
     }
     return attribute;
   }

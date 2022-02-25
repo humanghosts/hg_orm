@@ -180,7 +180,7 @@ class AttributeConvertors {
       }
       // 浮点类型
       if (attribute is FloatAttribute) {
-        return float.from(value, attribute: attribute, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        return await float.from(value, attribute: attribute, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
       }
       return await number.from(value, attribute: attribute, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
     }

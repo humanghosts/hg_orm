@@ -121,7 +121,7 @@ class ModelConvertor<F extends Model> extends Convertor<F, Map<String, Object?>>
   Future<Map<String, Object?>?> to(Model? value, {Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
     if (null == value) return null;
     Map<String, Object> map = <String, Object>{};
-    for (Attribute attribute in value.attributes.list) {
+    for (Attribute attribute in value.attributes.attributeList) {
       Object? value = await parent.attributeConvertors.getValue(
         attribute,
         tx: tx,
@@ -151,7 +151,7 @@ class ModelConvertor<F extends Model> extends Convertor<F, Map<String, Object?>>
     } else {
       realModel = model;
     }
-    for (Attribute attribute in realModel.attributes.list) {
+    for (Attribute attribute in realModel.attributes.attributeList) {
       String attributeName = attribute.name;
       Object? attributeValue = value[attributeName];
       await parent.attributeConvertors.getAttribute(

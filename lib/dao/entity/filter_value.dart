@@ -151,9 +151,9 @@ class SingleFilterValue implements FilterValue {
           DataDao<DataModel> dao = DaoCache.getByStr(valueType) as DataDao<DataModel>;
           if (mapValue is List) {
             List<String> idList = mapValue.map((e) => e.toString()).toList();
-            filter.appendList(await dao.findByIDList(idList));
+            filter.appendList(await dao.findByIDList(idList, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache));
           } else {
-            Object? result = await dao.findByID(mapValue as String);
+            Object? result = await dao.findByID(mapValue as String, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
             if (null != result) {
               // result为空，说明这个id的数据被删除了，不用管了，相当于惰性删除
               filter.append(result);
@@ -191,13 +191,13 @@ class SingleFilterValue implements FilterValue {
             List<CustomValue> oneValueAsList = [];
             for (Object oneMapValue in mapValue) {
               CustomValue customValue = ConstructorCache.getByStr(valueType);
-              await customValue.fromMap(oneMapValue);
+              await customValue.fromMap(oneMapValue, args: args);
               oneValueAsList.add(customValue);
             }
             filter.appendList(oneValueAsList);
           } else {
             CustomValue customValue = ConstructorCache.getByStr(valueType);
-            await customValue.fromMap(mapValue);
+            await customValue.fromMap(mapValue, args: args);
             filter.append(customValue);
           }
         }
@@ -295,7 +295,7 @@ class GroupFilterValue implements FilterValue {
       String type = child["type"];
       Map value = child["value"] as Map;
       FilterValue customValue = ConstructorCache.getByStr(type);
-      await customValue.fromMap(value);
+      await customValue.fromMap(value, args: args);
       filters.add(customValue);
     }
     return this;

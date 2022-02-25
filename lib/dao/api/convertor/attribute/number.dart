@@ -48,7 +48,7 @@ class NumberListAttributeConvertor<T extends num> extends AttributeConvertor<Num
     for (Object? one in value) {
       if (null == one) continue;
       if (one is! T?) continue;
-      attribute.append(one as T);
+      attribute.add(one as T);
     }
     return attribute;
   }

@@ -86,6 +86,21 @@ class SingleFilter extends Filter {
     append(value);
   }
 
+  /// 模糊不匹配
+  SingleFilter.notMatches({required this.field, required Object value}) : op = SingleFilterOp.notMatches {
+    append(value);
+  }
+
+  /// 模糊匹配开头
+  SingleFilter.matchesStart({required this.field, required Object value}) : op = SingleFilterOp.matchesStart {
+    append(value);
+  }
+
+  /// 模糊不匹配开头
+  SingleFilter.notMatchesStart({required this.field, required Object value}) : op = SingleFilterOp.notMatchesStart {
+    append(value);
+  }
+
   /// 在区间内
   SingleFilter.between({required this.field, required Object start, required Object end}) : op = SingleFilterOp.between {
     append(start);
@@ -107,9 +122,6 @@ class SingleFilter extends Filter {
 
   /// 获取值
   List<Object> get value => _value;
-
-  /// 获取指定位置的值
-  Object? getValueByIndex(int index) {}
 
   /// 想List类型的value中追加一个值，校验或存储值类型
   /// 如果追加的值是List类型，将调用appendList
@@ -252,6 +264,9 @@ class SingleFilterOp extends FilterOp {
   static const inListSymbol = "in";
   static const notInListSymbol = "notin";
   static const matchesSymbol = "matches";
+  static const notMatchesSymbol = "notMatches";
+  static const matchesStartSymbol = "matchesStart";
+  static const notMatchesStartSymbol = "notMatchesStart";
   static const betweenSymbol = "between";
   static const containsAllSymbol = "containsAll";
   static const containsOneSymbol = "containsOne";
@@ -267,6 +282,9 @@ class SingleFilterOp extends FilterOp {
   static const SingleFilterOp inList = SingleFilterOp._("在范围内", inListSymbol);
   static const SingleFilterOp notInList = SingleFilterOp._("不在范围内", notInListSymbol);
   static const SingleFilterOp matches = SingleFilterOp._("匹配", matchesSymbol);
+  static const SingleFilterOp notMatches = SingleFilterOp._("不匹配", matchesSymbol);
+  static const SingleFilterOp matchesStart = SingleFilterOp._("开始匹配", matchesSymbol);
+  static const SingleFilterOp notMatchesStart = SingleFilterOp._("开始不匹配", matchesSymbol);
 
   /// 左闭右开区间
   static const SingleFilterOp between = SingleFilterOp._("在区间内", betweenSymbol, 2);
@@ -285,6 +303,9 @@ class SingleFilterOp extends FilterOp {
     inList,
     notInList,
     matches,
+    notMatches,
+    matchesStart,
+    notMatchesStart,
     between,
     containsAll,
     containsOne,
@@ -302,6 +323,9 @@ class SingleFilterOp extends FilterOp {
     inListSymbol: inList,
     notInListSymbol: notInList,
     matchesSymbol: matches,
+    notMatchesSymbol: notMatches,
+    matchesStartSymbol: matchesStart,
+    notMatchesStartSymbol: notMatchesStart,
     betweenSymbol: between,
     containsAllSymbol: containsAll,
     containsOneSymbol: containsOne,

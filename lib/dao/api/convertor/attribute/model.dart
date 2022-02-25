@@ -11,6 +11,7 @@ class ModelAttributeConvertor<F extends ModelAttribute> extends AttributeConvert
     Model? model = value.value;
     return await parent.modelConvertors.getValue(
       model,
+      tx: tx,
       isLogicDelete: isLogicDelete,
       isCache: isCache,
     );
@@ -22,6 +23,7 @@ class ModelAttributeConvertor<F extends ModelAttribute> extends AttributeConvert
     Model? model = await parent.modelConvertors.getModelByType(
       attribute.type,
       value,
+      tx: tx,
       isLogicDelete: isLogicDelete,
       isCache: isCache,
     );
@@ -86,6 +88,7 @@ class ModelListAttributeConvertor<F extends ModelListAttribute> extends Attribut
     for (Model model in modelList) {
       Object? value = await parent.modelConvertors.getValue(
         model,
+        tx: tx,
         isLogicDelete: isLogicDelete,
         isCache: isCache,
       );
@@ -105,11 +108,12 @@ class ModelListAttributeConvertor<F extends ModelListAttribute> extends Attribut
       Model? model = await parent.modelConvertors.getModelByType(
         attribute.type,
         one,
+        tx: tx,
         isLogicDelete: isLogicDelete,
         isCache: isCache,
       );
       if (null == model) continue;
-      attribute.append(model);
+      attribute.add(model);
     }
     return attribute;
   }

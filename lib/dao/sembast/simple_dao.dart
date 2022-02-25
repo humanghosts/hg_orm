@@ -45,45 +45,21 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   /// 保存，存在更新，不存在插入
   @override
   Future<void> save(T model, {api.Transaction? tx}) async {
-    switch (model.state) {
-      case States.insert:
-        await _insert(model, tx: tx);
-        break;
-      case States.update:
-        await _update(model, tx: tx);
-        break;
-      case States.delete:
-        await _delete(model, tx: tx);
-        break;
-      case States.none:
-      case States.query:
-        break;
-    }
-  }
-
-  Future<void> _insert(T model, {api.Transaction? tx}) async {
-    await store
-        .record(_storeName)
-        .add(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: true, isCache: true));
-  }
-
-  Future<void> _update(T model, {api.Transaction? tx}) async {
-    /// 这里用put不用update的原因是：
-    /// sembast的update是foreach map的update，如果以前有key，现在没有key，
-    /// 无法清空数据，所以就直接替换了
+    States oldStates = model.state;
     await store
         .record(_storeName)
         .put(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: true, isCache: true));
-  }
-
-  Future<void> _delete(T model, {api.Transaction? tx}) async {
-    await store.record(_storeName).delete(api.Transaction.getOr(tx, dataBase));
+    if (oldStates == States.none) {
+      model.state = States.insert;
+    } else {
+      model.state = States.update;
+    }
   }
 
   @override
   Future<void> remove(T model, {api.Transaction? tx}) async {
+    await store.record(_storeName).delete(api.Transaction.getOr(tx, dataBase));
     model.state = States.delete;
-    await save(model);
   }
 
   @override
@@ -96,15 +72,16 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
     List<T> modelList = [];
     await withTransaction(tx, (tx) async {
       Object? value = await store.record(_storeName).get(tx.getTx());
-      if (null == value) {
-        return;
-      }
+      if (null == value) return;
       Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
       T t = ConstructorCache.get(T);
       await convertors.modelConvertor.getModelByModel(t, map, tx: tx, isLogicDelete: true, isCache: true);
       t.state = States.query;
       modelList.add(t);
     });
+    for (T model in modelList) {
+      model.state = States.query;
+    }
     return modelList;
   }
 }

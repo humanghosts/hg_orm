@@ -49,60 +49,24 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   /// 如果想要改变model状态，手动或者重新查询
   @override
   Future<void> save(T model, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
-    switch (model.state) {
-      case States.insert:
-        await _insert(model, tx: tx);
-        break;
-      case States.update:
-        await _update(model, tx: tx);
-        break;
-      case States.delete:
-        await _delete(model, isLogicDelete: isLogicDelete, tx: tx);
-        break;
-      case States.none:
-      case States.query:
-        break;
-    }
-  }
-
-  Future<void> _insert(T model, {api.Transaction? tx}) async {
-    model.createTime.value = DateTime.now();
-    model.timestamp.value = DateTime.now();
-    await store
-        .record(model.id.value)
-        .add(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache));
-    DataModelCache.put(model);
-  }
-
-  Future<void> _update(T model, {api.Transaction? tx}) async {
+    States oldStates = model.state;
+    model.createTime.value ??= DateTime.now();
     model.timestamp.value = DateTime.now();
     await store
         .record(model.id.value)
         .put(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache));
     DataModelCache.put(model);
-  }
-
-  Future<void> _delete(T model, {api.Transaction? tx, bool? isLogicDelete}) async {
-    bool logicDelete = isLogicDelete ?? this.isLogicDelete;
-    if (logicDelete) {
-      model.isDelete.value = true;
-      model.deleteTime.value = DateTime.now();
-      await store
-          .record(model.id.value)
-          .update(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: logicDelete, isCache: isCache));
-      DataModelCache.remove(model.id.value);
-      return;
+    if (oldStates == States.none) {
+      model.state = States.insert;
+    } else {
+      model.state = States.update;
     }
-    await store.record(model.id.value).delete(api.Transaction.getOr(tx, dataBase));
-    DataModelCache.remove(model.id.value);
   }
 
   /// 保存，存在更新，不存在插入
   @override
   Future<void> saveList(List<T> modelList, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
-    if (modelList.isEmpty) {
-      return;
-    }
+    if (modelList.isEmpty) return;
     await withTransaction(tx, (tx) async {
       for (T model in modelList) {
         await save(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -124,9 +88,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
 
   @override
   Future<void> updateList(List<String> idList, Map<String, Object?> value, {api.Transaction? tx}) async {
-    if (idList.isEmpty) {
-      return;
-    }
+    if (idList.isEmpty) return;
     await withTransaction(tx, (tx) async {
       for (String id in idList) {
         await update(id, value, tx: tx);
@@ -140,9 +102,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     List<String> removeIdList = [];
     await withTransaction(tx, (tx) async {
       List<String> idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter))) as List<String>;
-      if (idList.isEmpty) {
-        return;
-      }
+      if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
       Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
       // 更新
@@ -164,16 +124,25 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   /// 逻辑移除
   @override
   Future<void> remove(T model, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
+    bool logicDelete = isLogicDelete ?? this.isLogicDelete;
+    if (logicDelete) {
+      model.isDelete.value = true;
+      model.deleteTime.value = DateTime.now();
+      await store
+          .record(model.id.value)
+          .update(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: logicDelete, isCache: isCache));
+      DataModelCache.remove(model.id.value);
+      return;
+    }
+    await store.record(model.id.value).delete(api.Transaction.getOr(tx, dataBase));
+    DataModelCache.remove(model.id.value);
     model.state = States.delete;
-    await save(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
   }
 
   /// 移除
   @override
   Future<void> removeList(List<T> modelList, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
-    if (modelList.isEmpty) {
-      return;
-    }
+    if (modelList.isEmpty) return;
     await withTransaction(tx, (tx) async {
       for (T model in modelList) {
         await remove(model, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
@@ -189,9 +158,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       bool logicDelete = isLogicDelete ?? this.isLogicDelete;
       // 删除前留下ID，便于后面删除缓存
       List<String> idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter))) as List<String>;
-      if (idList.isEmpty) {
-        return;
-      }
+      if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
       Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
       if (logicDelete) {
@@ -220,9 +187,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   /// 恢复，同时修改状态为query
   @override
   Future<void> recover(T model, {api.Transaction? tx, bool? isCache}) async {
-    if (model.isDelete.value == false) {
-      return;
-    }
+    if (model.isDelete.value == false) return;
     model.isDelete.value = false;
     model.deleteTime.value = null;
     // 直接替换数据
@@ -241,9 +206,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
 
   @override
   Future<void> recoverList(List<T> modelList, {api.Transaction? tx, bool? isCache}) async {
-    if (modelList.isEmpty) {
-      return;
-    }
+    if (modelList.isEmpty) return;
     await withTransaction(tx, (tx) async {
       for (T model in modelList) {
         await recover(model, tx: tx, isCache: isCache);
@@ -258,9 +221,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     await withTransaction(tx, (tx) async {
       // 删除前留下ID，便于后面删除缓存
       List<String> idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter))) as List<String>;
-      if (idList.isEmpty) {
-        return;
-      }
+      if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
       Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
       await store.update(
@@ -289,9 +250,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       isLogicDelete: isLogicDelete,
       isCache: isCache,
     );
-    if (newModelList.isEmpty) {
-      return null;
-    }
+    if (newModelList.isEmpty) return null;
     return newModelList[0];
   }
 
@@ -337,9 +296,12 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       start: start,
       end: end,
     );
-    List<RecordSnapshot> record = await store.find(api.Transaction.getOr(tx, dataBase), finder: finder);
-    List<T> modeList = await _merge(record, tx, logicDelete, isCache ?? this.isCache);
-    return modeList;
+    List<T> modelList = [];
+    await withTransaction(tx, (tx) async {
+      List<RecordSnapshot> record = await store.find(tx.getTx(), finder: finder);
+      modelList = await _merge(record, tx, logicDelete, isCache ?? this.isCache);
+    });
+    return modelList;
   }
 
   /// 获取逻辑删除条件
@@ -390,12 +352,15 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       start: start,
       end: end,
     );
-    RecordSnapshot? record = await store.findFirst(api.Transaction.getOr(tx, dataBase), finder: finder);
-    if (null == record) {
-      return null;
-    }
-    List<T> newModelList = await _merge([record], tx, logicDelete, isCache ?? this.isCache);
-    return newModelList[0];
+    T? data;
+    await withTransaction(tx, (tx) async {
+      RecordSnapshot? record = await store.findFirst(tx.getTx(), finder: finder);
+      if (null != record) {
+        List<T> newModelList = await _merge([record], tx, logicDelete, isCache ?? this.isCache);
+        data = newModelList[0];
+      }
+    });
+    return data;
   }
 
   /// 计数
@@ -458,16 +423,18 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   /// 填充数据
   Future<List<T>> _convert(List<Map<String, Object?>> mapList, api.Transaction? tx, bool isLogicDelete, bool isCache) async {
     List<T> modelList = [];
-    for (var map in mapList) {
-      String id = map[sampleModel.id.name] as String;
-      // 在merge中，fill之前，已经将mode放入undone缓存中，这里直接取即可
-      DataModelCacheNode<T> cacheNode = DataModelCache.get(id)!;
-      await convertors.modelConvertor.getModelByModel(cacheNode.model, map, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
-      // 转换完成的model缓存升级
-      if (isCache) DataModelCache.levelUp(id);
-      // 放入数据收集中
-      modelList.add(cacheNode.model);
-    }
+    await withTransaction(tx, (tx) async {
+      for (var map in mapList) {
+        String id = map[sampleModel.id.name] as String;
+        // 在merge中，fill之前，已经将mode放入undone缓存中，这里直接取即可
+        DataModelCacheNode<T> cacheNode = DataModelCache.get(id)!;
+        await convertors.modelConvertor.getModelByModel(cacheNode.model, map, tx: tx, isLogicDelete: isLogicDelete, isCache: isCache);
+        // 转换完成的model缓存升级
+        if (isCache) DataModelCache.levelUp(id);
+        // 放入数据收集中
+        modelList.add(cacheNode.model);
+      }
+    });
     // 填充后操作
     return modelList;
   }

@@ -14,10 +14,7 @@ class ValueConvertors {
 
   static ValueConvertors? _instance;
 
-  static ValueConvertors get instance {
-    _instance ??= ValueConvertors._();
-    return _instance!;
-  }
+  static ValueConvertors get instance => _instance ??= ValueConvertors._();
 }
 
 /// 转换器

@@ -94,7 +94,7 @@ packages:
       name: hg_entity
       url: "http://localhost:8080"
     source: hosted
-    version: "0.1.15"
+    version: "0.1.16"
   lints:
     dependency: transitive
     description:
@@ -206,7 +206,7 @@ packages:
       name: sembast
       url: "https://pub.dartlang.org"
     source: hosted
-    version: "3.1.2"
+    version: "3.2.0"
   sky_engine:
     dependency: transitive
     description: flutter
@@ -297,5 +297,5 @@ packages:
     source: hosted
     version: "0.2.0+1"
 sdks:
-  dart: ">=2.15.0 <3.0.0"
+  dart: ">=2.16.0 <3.0.0"
   flutter: ">=2.5.0"

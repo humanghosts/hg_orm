@@ -81,6 +81,7 @@ class SembastSortConvertors extends api.SortConvertor<SortOrder> {
   @override
   Future<api.Sort?> from(SortOrder? value) async {
     if (null == value) return null;
+    // SortOrder实际上是SembastSorOrder，但是SembastSorOrder不可见，无法获取数据
     throw UnimplementedError();
   }
 

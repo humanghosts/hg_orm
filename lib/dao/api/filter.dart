@@ -33,7 +33,7 @@ class SingleFilter extends Filter {
   /// 值类型，集合类型为泛型类型
   Type? _valueType;
 
-  SingleFilter({required this.field, this.op = SingleFilterOp.equals});
+  SingleFilter({required this.field, SingleFilterOp? op}) : this.op = op ?? SingleFilterOp.equals;
 
   /// 等于
   SingleFilter.equals({required this.field, required Object value}) : op = SingleFilterOp.equals {
@@ -245,336 +245,7 @@ class GroupFilter extends Filter {
 extension SingleFilterMatchable on SingleFilter {
   /// 转换单个过滤条件
   bool isMatch(Map<String, Object?> record) {
-    switch (op) {
-      // 相等
-      case SingleFilterOp.equals:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          // 如果value为null null as true
-          nullAsTrue: value == null,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              int intValue = value.millisecondsSinceEpoch;
-              return recordValue == intValue;
-            } else {
-              return recordValue == value;
-            }
-          },
-        );
-      // 不等
-      case SingleFilterOp.notEquals:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          // 如果value为null null as true
-          nullAsTrue: value != null,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              int intValue = value.millisecondsSinceEpoch;
-              return recordValue != intValue;
-            } else {
-              return recordValue != value;
-            }
-          },
-        );
-      // 为空
-      case SingleFilterOp.isNull:
-        return getMatch(
-          record: record,
-          field: field,
-          nullAsTrue: true,
-          isMatch: (recordValue) => recordValue == null,
-        );
-      // 非空
-      case SingleFilterOp.notNull:
-        return getMatch(
-          record: record,
-          field: field,
-          nullAsTrue: false,
-          isMatch: (recordValue) => recordValue != null,
-        );
-      // 小于
-      case SingleFilterOp.lessThan:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              return _lessThan(recordValue, value.millisecondsSinceEpoch);
-            } else {
-              return _lessThan(recordValue, value);
-            }
-          },
-        );
-      // 小于等于
-      case SingleFilterOp.lessThanOrEquals:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              int intValue = value.millisecondsSinceEpoch;
-              return _lessThan(recordValue, intValue) || recordValue == intValue;
-            } else {
-              return _lessThan(recordValue, value) || recordValue == value;
-            }
-          },
-        );
-      // 大于
-      case SingleFilterOp.greaterThan:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              return _greaterThan(recordValue, value.millisecondsSinceEpoch);
-            } else {
-              return _greaterThan(recordValue, value);
-            }
-          },
-        );
-      // 大于等于
-      case SingleFilterOp.greaterThanOrEquals:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              int intValue = value.millisecondsSinceEpoch;
-              return _greaterThan(recordValue, intValue) || recordValue == intValue;
-            } else {
-              return _greaterThan(recordValue, value) || recordValue == value;
-            }
-          },
-        );
-      // 在列表中
-      case SingleFilterOp.inList:
-        List? value = get(0) as List?;
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) => value?.contains(recordValue) ?? false,
-        );
-      // 不在列表中
-      case SingleFilterOp.notInList:
-        List? value = get(0) as List?;
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == value) return false;
-            return !value.contains(recordValue);
-          },
-        );
-      // 匹配字符串
-      case SingleFilterOp.matches:
-        String? value = get(0) as String?;
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == value) return false;
-            return RegExp(value).hasMatch(recordValue.toString());
-          },
-        );
-      // 字符串不匹配
-      case SingleFilterOp.notMatches:
-        String? value = get(0) as String?;
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == value) return true;
-            return !(RegExp(value).hasMatch(recordValue.toString()));
-          },
-        );
-      // 匹配字符串开头
-      case SingleFilterOp.matchesStart:
-        String? value = get(0) as String?;
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == value) return false;
-            return recordValue.toString().startsWith(value);
-          },
-        );
-      // 不匹配字符串开头
-      case SingleFilterOp.notMatchesStart:
-        String? value = get(0) as String?;
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == value) return true;
-            return !recordValue.toString().startsWith(value);
-          },
-        );
-      // 时间段内
-      case SingleFilterOp.between:
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            int startInt = 0;
-            int endInt = 0;
-            if (get(0) is DateTime) startInt = (get(0) as DateTime).millisecondsSinceEpoch;
-            if (get(1) is DateTime) endInt = (get(1) as DateTime).millisecondsSinceEpoch;
-            if (null == recordValue) return false;
-            if (recordValue is! int) return false;
-            if (startInt == 0 && endInt == 0) return false;
-            if (startInt != 0 && endInt != 0) return recordValue < endInt && recordValue >= startInt;
-            if (startInt == 0) {
-              return recordValue < endInt;
-            } else {
-              return recordValue > startInt;
-            }
-          },
-        );
-      // 包含全部
-      case SingleFilterOp.containsAll:
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == recordValue) return false;
-            List? filterValueList = get(0) as List?;
-            if (null == filterValueList) return false;
-            List recordValueList = recordValue as List;
-            for (var oneValue in filterValueList) {
-              if (!recordValueList.contains(oneValue)) return false;
-            }
-            return true;
-          },
-        );
-      case SingleFilterOp.containsOne:
-        return getMatch(
-          record: record,
-          field: field,
-          isMatch: (recordValue) {
-            if (null == recordValue) return false;
-            List? filterValueList = get(0) as List?;
-            if (null == filterValueList) return false;
-            List recordValueList = recordValue as List;
-            for (var oneValue in filterValueList) {
-              if (recordValueList.contains(oneValue)) return true;
-            }
-            return false;
-          },
-        );
-      default:
-        Object? value = get(0);
-        return getMatch(
-          record: record,
-          field: field,
-          // 如果value为null null as true
-          nullAsTrue: value == null,
-          isMatch: (recordValue) {
-            if (value is DateTime) {
-              int intValue = value.millisecondsSinceEpoch;
-              return recordValue == intValue;
-            } else {
-              return recordValue == value;
-            }
-          },
-        );
-    }
-  }
-
-  /// 是否匹配
-  bool getMatch({
-    required Map<String, Object?> record,
-    required String field,
-    bool nullAsTrue = false,
-    required bool Function(Object? recordValue) isMatch,
-  }) {
-    return _getMapMatch(mapValue: record, field: field, nullAsTrue: nullAsTrue, isMatch: isMatch);
-  }
-
-  /// map类型匹配
-  bool _getMapMatch({
-    required Map<String, Object?> mapValue,
-    required String field,
-    bool nullAsTrue = false,
-    required bool Function(Object? recordValue) isMatch,
-  }) {
-    Map<String, Object?> map = mapValue;
-    List<String> keys = field.split(".");
-    // 当前key
-    String key = keys[0];
-    // 不存在key返回不匹配
-    if (!map.containsKey(key)) return nullAsTrue;
-    // 如果是最后一个key 并且存在key，判断是否匹配
-    Object? value = map[key];
-    if (keys.length == 1) {
-      return isMatch(value);
-    }
-    // 不是最后一个key 继续向下寻找
-    String nextKey = keys.sublist(1).join(".");
-    // list类型处理
-    if (value is List) {
-      return _getListMatch(listValue: value, field: nextKey, nullAsTrue: nullAsTrue, isMatch: isMatch);
-    }
-    // map类型处理
-    if (value is Map) {
-      return _getMapMatch(mapValue: value as Map<String, Object?>, field: nextKey, nullAsTrue: nullAsTrue, isMatch: isMatch);
-    }
-    // 其它类型不匹配
-    return false;
-  }
-
-  /// list类型匹配
-  bool _getListMatch({
-    required List listValue,
-    required String field,
-    bool nullAsTrue = false,
-    required bool Function(Object? recordValue) isMatch,
-  }) {
-    bool match = false;
-    for (Object? value in listValue) {
-      if (null == value) continue;
-      // list类型处理
-      if (value is List) {
-        match = match || _getListMatch(listValue: value, field: field, nullAsTrue: nullAsTrue, isMatch: isMatch);
-      }
-      // map类型处理
-      if (value is Map) {
-        match = match || _getMapMatch(mapValue: value as Map<String, Object?>, field: field, nullAsTrue: nullAsTrue, isMatch: isMatch);
-      }
-      if (match) {
-        return match;
-      }
-    }
-    return match;
-  }
-
-  /// 比较 copy from sembast
-  int? _safeCompare(Object? value1, Object? value2) {
-    try {
-      if (value1 is Comparable && value2 is Comparable) {
-        return Comparable.compare(value1, value2);
-      }
-    } catch (_) {}
-    return null;
-  }
-
-  /// 是否小于 copy from sembast
-  bool _lessThan(Object? value1, Object? value2) {
-    var cmp = _safeCompare(value1, value2);
-    return cmp != null && cmp < 0;
-  }
-
-  /// 是否大于 copy from sembast
-  bool _greaterThan(Object? value1, Object? value2) {
-    var cmp = _safeCompare(value1, value2);
-    return cmp != null && cmp > 0;
+    return op.isMatch(record: record, field: field, valueList: value);
   }
 }
 
@@ -610,7 +281,14 @@ extension GroupFilterMatchable on GroupFilter {
 class SingleFilterOp extends FilterOp {
   final int valueNumbers;
 
-  const SingleFilterOp._(String title, String symbol, [this.valueNumbers = 1]) : super._(title, symbol);
+  /// 是否匹配
+  bool Function({
+    required Map<String, Object?> record,
+    required String field,
+    required List<Object?> valueList,
+  }) isMatch;
+
+  SingleFilterOp._(String title, String symbol, {this.valueNumbers = 1, required this.isMatch}) : super._(title, symbol);
 
   static const equalsSymbol = "=";
   static const notEqualsSymbol = "!=";
@@ -630,27 +308,322 @@ class SingleFilterOp extends FilterOp {
   static const containsAllSymbol = "containsAll";
   static const containsOneSymbol = "containsOne";
 
-  static const SingleFilterOp equals = SingleFilterOp._("等于", equalsSymbol);
-  static const SingleFilterOp notEquals = SingleFilterOp._("不等于", notEqualsSymbol);
-  static const SingleFilterOp isNull = SingleFilterOp._("为空", isNullSymbol, 0);
-  static const SingleFilterOp notNull = SingleFilterOp._("非空", notNullSymbol, 0);
-  static const SingleFilterOp lessThan = SingleFilterOp._("小于", lessThanSymbol);
-  static const SingleFilterOp lessThanOrEquals = SingleFilterOp._("小于等于", lessThanOrEqualsSymbol);
-  static const SingleFilterOp greaterThan = SingleFilterOp._("大于", greaterThanSymbol);
-  static const SingleFilterOp greaterThanOrEquals = SingleFilterOp._("大于等于", greaterThanOrEqualsSymbol);
-  static const SingleFilterOp inList = SingleFilterOp._("在范围内", inListSymbol);
-  static const SingleFilterOp notInList = SingleFilterOp._("不在范围内", notInListSymbol);
-  static const SingleFilterOp matches = SingleFilterOp._("匹配", matchesSymbol);
-  static const SingleFilterOp notMatches = SingleFilterOp._("不匹配", matchesSymbol);
-  static const SingleFilterOp matchesStart = SingleFilterOp._("开始匹配", matchesSymbol);
-  static const SingleFilterOp notMatchesStart = SingleFilterOp._("开始不匹配", matchesSymbol);
+  static SingleFilterOp equals = SingleFilterOp._(
+    "等于",
+    equalsSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      Object? value = getValue(valueList, 0);
+      return getMatch(
+        record: record,
+        field: field,
+        // 如果value为null null as true
+        nullAsTrue: value == null,
+        isMatch: (recordValue) {
+          if (value is DateTime) {
+            int intValue = value.millisecondsSinceEpoch;
+            return recordValue == intValue;
+          } else {
+            return recordValue == value;
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp notEquals = SingleFilterOp._(
+    "不等于",
+    notEqualsSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      Object? value = getValue(valueList, 0);
+      return getMatch(
+        record: record,
+        field: field,
+        // 如果value为null null as true
+        nullAsTrue: value != null,
+        isMatch: (recordValue) {
+          if (value is DateTime) {
+            int intValue = value.millisecondsSinceEpoch;
+            return recordValue != intValue;
+          } else {
+            return recordValue != value;
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp isNull = SingleFilterOp._(
+    "为空",
+    isNullSymbol,
+    valueNumbers: 0,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: true,
+        isMatch: (recordValue) => recordValue == null,
+      );
+    },
+  );
+  static SingleFilterOp notNull = SingleFilterOp._(
+    "非空",
+    notNullSymbol,
+    valueNumbers: 0,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: false,
+        isMatch: (recordValue) => recordValue != null,
+      );
+    },
+  );
+  static SingleFilterOp lessThan = SingleFilterOp._(
+    "小于",
+    lessThanSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      Object? value = getValue(valueList, 0);
+      return getMatch(
+        record: record,
+        field: field,
+        // 当值不为空的时候，没有值就是小于
+        nullAsTrue: value != null,
+        isMatch: (recordValue) {
+          if (value is DateTime) {
+            return _lessThan(recordValue, value.millisecondsSinceEpoch);
+          } else {
+            return _lessThan(recordValue, value);
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp lessThanOrEquals = SingleFilterOp._(
+    "小于等于",
+    lessThanOrEqualsSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      Object? value = getValue(valueList, 0);
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: value != null,
+        isMatch: (recordValue) {
+          if (value is DateTime) {
+            int intValue = value.millisecondsSinceEpoch;
+            return _lessThan(recordValue, intValue) || recordValue == intValue;
+          } else {
+            return _lessThan(recordValue, value) || recordValue == value;
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp greaterThan = SingleFilterOp._(
+    "大于",
+    greaterThanSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      Object? value = getValue(valueList, 0);
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: null == value,
+        isMatch: (recordValue) {
+          if (value is DateTime) {
+            return _greaterThan(recordValue, value.millisecondsSinceEpoch);
+          } else {
+            return _greaterThan(recordValue, value);
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp greaterThanOrEquals = SingleFilterOp._(
+    "大于等于",
+    greaterThanOrEqualsSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      Object? value = getValue(valueList, 0);
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: null == value,
+        isMatch: (recordValue) {
+          if (value is DateTime) {
+            int intValue = value.millisecondsSinceEpoch;
+            return _greaterThan(recordValue, intValue) || recordValue == intValue;
+          } else {
+            return _greaterThan(recordValue, value) || recordValue == value;
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp inList = SingleFilterOp._(
+    "在范围内",
+    inListSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      List? value = getValue(valueList, 0) as List?;
+      return getMatch(
+        record: record,
+        field: field,
+        isMatch: (recordValue) => value?.contains(recordValue) ?? false,
+      );
+    },
+  );
+  static SingleFilterOp notInList = SingleFilterOp._(
+    "不在范围内",
+    notInListSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      List? value = getValue(valueList, 0) as List?;
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: true,
+        isMatch: (recordValue) {
+          if (null == value) return true;
+          return !value.contains(recordValue);
+        },
+      );
+    },
+  );
+  static SingleFilterOp matches = SingleFilterOp._(
+    "匹配",
+    matchesSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      String? value = getValue(valueList, 0) as String?;
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: value == null,
+        isMatch: (recordValue) {
+          if (null == value) return false;
+          return RegExp(value).hasMatch(recordValue.toString());
+        },
+      );
+    },
+  );
+  static SingleFilterOp notMatches = SingleFilterOp._(
+    "不匹配",
+    matchesSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      String? value = getValue(valueList, 0) as String?;
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: value != null,
+        isMatch: (recordValue) {
+          if (null == value) return true;
+          return !(RegExp(value).hasMatch(recordValue.toString()));
+        },
+      );
+    },
+  );
+  static SingleFilterOp matchesStart = SingleFilterOp._(
+    "开始匹配",
+    matchesSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      String? value = getValue(valueList, 0) as String?;
+      return getMatch(
+        record: record,
+        field: field,
+        nullAsTrue: value == null,
+        isMatch: (recordValue) {
+          if (null == value) return false;
+          return recordValue.toString().startsWith(value);
+        },
+      );
+    },
+  );
+  static SingleFilterOp notMatchesStart = SingleFilterOp._(
+    "开始不匹配",
+    matchesSymbol,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      String? value = getValue(valueList, 0) as String?;
+      return getMatch(
+        record: record,
+        field: field,
+        isMatch: (recordValue) {
+          if (null == value) return true;
+          return !recordValue.toString().startsWith(value);
+        },
+      );
+    },
+  );
 
   /// 左闭右开区间
-  static const SingleFilterOp between = SingleFilterOp._("在区间内", betweenSymbol, 2);
-  static const SingleFilterOp containsAll = SingleFilterOp._("包含全部", containsAllSymbol);
-  static const SingleFilterOp containsOne = SingleFilterOp._("至少包含一个", containsOneSymbol);
+  static SingleFilterOp between = SingleFilterOp._(
+    "在区间内",
+    betweenSymbol,
+    valueNumbers: 2,
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+      return getMatch(
+        record: record,
+        field: field,
+        isMatch: (recordValue) {
+          int startInt = 0;
+          int endInt = 0;
+          if (getValue(valueList, 0) is DateTime) startInt = (getValue(valueList, 0) as DateTime).millisecondsSinceEpoch;
+          if (getValue(valueList, 1) is DateTime) endInt = (getValue(valueList, 1) as DateTime).millisecondsSinceEpoch;
+          if (null == recordValue) return false;
+          if (recordValue is! int) return false;
+          if (startInt == 0 && endInt == 0) return false;
+          if (startInt != 0 && endInt != 0) return recordValue < endInt && recordValue >= startInt;
+          if (startInt == 0) {
+            return recordValue < endInt;
+          } else {
+            return recordValue > startInt;
+          }
+        },
+      );
+    },
+  );
+  static SingleFilterOp containsAll = SingleFilterOp._(
+    "包含全部",
+    containsAllSymbol,
+    isMatch: ({
+      required Map<String, Object?> record,
+      required String field,
+      required List<Object?> valueList,
+    }) {
+      return getMatch(
+        record: record,
+        field: field,
+        isMatch: (recordValue) {
+          if (null == recordValue) return false;
+          List? filterValueList = getValue(valueList, 0) as List?;
+          if (null == filterValueList) return false;
+          List recordValueList = recordValue as List;
+          for (var oneValue in filterValueList) {
+            if (!recordValueList.contains(oneValue)) return false;
+          }
+          return true;
+        },
+      );
+    },
+  );
+  static SingleFilterOp containsOne = SingleFilterOp._(
+    "至少包含一个",
+    containsOneSymbol,
+    isMatch: ({
+      required Map<String, Object?> record,
+      required String field,
+      required List<Object?> valueList,
+    }) {
+      return getMatch(
+        record: record,
+        field: field,
+        isMatch: (recordValue) {
+          if (null == recordValue) return false;
+          List? filterValueList = getValue(valueList, 0) as List?;
+          if (null == filterValueList) return false;
+          List recordValueList = recordValue as List;
+          for (var oneValue in filterValueList) {
+            if (recordValueList.contains(oneValue)) return true;
+          }
+          return false;
+        },
+      );
+    },
+  );
 
-  static const List<SingleFilterOp> list = [
+  static List<SingleFilterOp> list = [
     equals,
     notEquals,
     isNull,
@@ -670,7 +643,7 @@ class SingleFilterOp extends FilterOp {
     containsOne,
   ];
 
-  static const Map<String, SingleFilterOp> map = {
+  static Map<String, SingleFilterOp> map = {
     equalsSymbol: equals,
     notEqualsSymbol: notEquals,
     isNullSymbol: isNull,
@@ -689,6 +662,100 @@ class SingleFilterOp extends FilterOp {
     containsAllSymbol: containsAll,
     containsOneSymbol: containsOne,
   };
+
+  static Object? getValue(List<Object?> valueList, int index) {
+    if (index >= valueList.length) return null;
+    return valueList[index];
+  }
+
+  /// 是否匹配
+  static bool getMatch({
+    required Map<String, Object?> record,
+    required String field,
+    bool nullAsTrue = false,
+    required bool Function(Object? recordValue) isMatch,
+  }) {
+    return _getMapMatch(mapValue: record, field: field, nullAsTrue: nullAsTrue, isMatch: isMatch);
+  }
+
+  /// map类型匹配
+  static bool _getMapMatch({
+    required Map<String, Object?> mapValue,
+    required String field,
+    bool nullAsTrue = false,
+    required bool Function(Object? recordValue) isMatch,
+  }) {
+    Map<String, Object?> map = mapValue;
+    List<String> keys = field.split(".");
+    // 当前key
+    String key = keys[0];
+    // 不存在key返回不匹配
+    if (!map.containsKey(key)) return nullAsTrue;
+    // 如果是最后一个key 并且存在key，判断是否匹配
+    Object? value = map[key];
+    if (keys.length == 1) {
+      return isMatch(value);
+    }
+    // 不是最后一个key 继续向下寻找
+    String nextKey = keys.sublist(1).join(".");
+    // list类型处理
+    if (value is List) {
+      return _getListMatch(listValue: value, field: nextKey, nullAsTrue: nullAsTrue, isMatch: isMatch);
+    }
+    // map类型处理
+    if (value is Map) {
+      return _getMapMatch(mapValue: value as Map<String, Object?>, field: nextKey, nullAsTrue: nullAsTrue, isMatch: isMatch);
+    }
+    // 其它类型不匹配
+    return false;
+  }
+
+  /// list类型匹配
+  static bool _getListMatch({
+    required List listValue,
+    required String field,
+    bool nullAsTrue = false,
+    required bool Function(Object? recordValue) isMatch,
+  }) {
+    bool match = false;
+    for (Object? value in listValue) {
+      if (null == value) continue;
+      // list类型处理
+      if (value is List) {
+        match = match || _getListMatch(listValue: value, field: field, nullAsTrue: nullAsTrue, isMatch: isMatch);
+      }
+      // map类型处理
+      if (value is Map) {
+        match = match || _getMapMatch(mapValue: value as Map<String, Object?>, field: field, nullAsTrue: nullAsTrue, isMatch: isMatch);
+      }
+      if (match) {
+        return match;
+      }
+    }
+    return match;
+  }
+
+  /// 比较 copy from sembast
+  static int? _safeCompare(Object? value1, Object? value2) {
+    try {
+      if (value1 is Comparable && value2 is Comparable) {
+        return Comparable.compare(value1, value2);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// 是否小于 copy from sembast
+  static bool _lessThan(Object? value1, Object? value2) {
+    var cmp = _safeCompare(value1, value2);
+    return cmp != null && cmp < 0;
+  }
+
+  /// 是否大于 copy from sembast
+  static bool _greaterThan(Object? value1, Object? value2) {
+    var cmp = _safeCompare(value1, value2);
+    return cmp != null && cmp > 0;
+  }
 }
 
 /// 条件组操作符

@@ -257,12 +257,24 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   /// 通过ID列表查询
   @override
   Future<List<T>> findByIDList(List<String> idList, {api.Transaction? tx, bool? isLogicDelete, bool? isCache}) async {
-    return await find(
+    List<T> modelList = await find(
       tx: tx,
       filter: api.SingleFilter.inList(field: sampleModel.id.name, value: idList),
       isLogicDelete: isLogicDelete,
       isCache: isCache,
     );
+    if (modelList.isEmpty) return [];
+    // 下面的步骤是为了保证modelList的顺序与idList的顺序一致，毕竟是list，不是set
+    Map<String, T> idMap = {};
+    for (T model in modelList) {
+      idMap[model.id.value] = model;
+    }
+    List<T> modelListOrder = [];
+    for (String id in idList) {
+      if (!idMap.containsKey(id)) continue;
+      modelListOrder.add(idMap[id]!);
+    }
+    return modelListOrder;
   }
 
   /// 自定义查询

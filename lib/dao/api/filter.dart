@@ -13,6 +13,9 @@ abstract class FilterOp {
   final String value;
 
   const FilterOp._(this.name, this.value);
+
+  @override
+  String toString() => name;
 }
 
 /// 单个过滤条件
@@ -265,7 +268,7 @@ extension GroupFilterMatchable on GroupFilter {
         continue;
       }
       if (GroupFilterOp.or == op && isMatch) return true;
-      if (GroupFilterOp.and == op && isMatch) return false;
+      if (GroupFilterOp.and == op && !isMatch) return false;
     }
     return GroupFilterOp.and == op;
   }

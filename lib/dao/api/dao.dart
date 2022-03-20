@@ -133,6 +133,9 @@ abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
 
   /// 列表变树
   List<T> listToTree(List<T> modelList);
+
+  /// 树变列表
+  List<T> treeToList(List<T> modelList);
 }
 
 /// 用于普通模型(只有一个模型)的dao

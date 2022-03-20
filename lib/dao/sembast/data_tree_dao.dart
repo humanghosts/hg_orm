@@ -196,4 +196,23 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
     // 填返回根节点
     return modelMap.values.toList();
   }
+
+  @override
+  List<T> treeToList(List<T> modelTree) {
+    List<T> modelList = [];
+    for (T model in modelTree) {
+      modelList.addAll(_treeNodeToList(model));
+    }
+    return modelList;
+  }
+
+  List<T> _treeNodeToList(T model) {
+    List<T> modelList = [model];
+    if (model.children.isNull) return modelList;
+    List<T> children = model.children.value as List<T>;
+    for (T child in children) {
+      modelList.addAll(_treeNodeToList(child));
+    }
+    return modelList;
+  }
 }

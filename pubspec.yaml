@@ -1,6 +1,6 @@
 name: hg_orm
 description: orm package
-version: 1.0.0
+version: 1.0.1
 publish_to: http://localhost:8080
 homepage: https://github.com/humanghosts/hg_orm
 
@@ -13,10 +13,8 @@ dependencies:
     sdk: flutter
 
   hg_entity:
-    hosted:
-      name: hg_entity
-      url: http://localhost:8080
-    version: ^1.0.0
+    path: ../hg_entity
+
   sembast: ^3.2.0
   path_provider: ^2.0.9
   path: ^1.8.0

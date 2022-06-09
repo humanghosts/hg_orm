@@ -1,10 +1,12 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:hg_orm/api/export.dart' as api;
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
+import 'package:sembast_web/sembast_web.dart';
 
 import '../dao/kv.dart';
 
@@ -32,6 +34,11 @@ class SembastDatabase extends api.Database {
   /// 初始化数据库
   @override
   Future<void> open() async {
+    if (kIsWeb) {
+      _database = await databaseFactoryWeb.openDatabase(path);
+      log("sembast_web数据库打开成功");
+      return;
+    }
     // 获取app的路径 path_provider包下
     final appDocumentDir = await getApplicationDocumentsDirectory();
     // 获取全量数据库路径

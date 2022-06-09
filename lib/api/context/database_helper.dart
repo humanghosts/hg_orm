@@ -13,13 +13,11 @@ class DatabaseHelper {
 
   /// 需要处理好constructor的依赖顺序，保证被依赖的先注册，因为构造方法中可能含有取值操作
   static Future<void> open({required DatabaseConfig config}) async {
+    _database = config.database;
     await config.database.open();
     await config.database.openKV();
-    _database = config.database;
     // 注册hg_orm下的构造器
-    ormEntitiesMap.forEach((key, value) {
-      ConstructorCache.put(key, value);
-    });
+    ormEntitiesMap.forEach((key, value) => ConstructorCache.put(key, value));
   }
 
   /// 刷新数据库

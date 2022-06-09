@@ -48,7 +48,7 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
     bool? isLogicDelete,
     required Convertors convertors,
   }) : super(convertors: convertors) {
-    _isLogicDelete = isLogicDelete ?? DatabaseHelper.database!.isLogicDelete;
+    _isLogicDelete = isLogicDelete ?? DatabaseHelper.database.isLogicDelete;
   }
 
   bool get isLogicDelete => _isLogicDelete;

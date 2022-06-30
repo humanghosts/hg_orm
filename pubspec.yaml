@@ -13,10 +13,9 @@ dependencies:
     sdk: flutter
 
   hg_entity:
-    hosted:
-      name: hg_entity
-      url: http://localhost:8080
-    version: ^1.0.0
+    git:
+      url: https://github.com/humanghosts/hg_entity.git
+      ref: 1.0.0
   sembast: ^3.2.0
   path_provider: ^2.0.9
   path: ^1.8.0

@@ -12,8 +12,10 @@ dependencies:
   flutter:
     sdk: flutter
 
+#  hg_entity:
+#    path: ../hg_entity
   hg_entity:
-    path: ../hg_entity
+    git: https://github.com/humanghosts/hg_entity.git
 
   sembast: ^3.2.0
   sembast_web: ^2.0.1+1

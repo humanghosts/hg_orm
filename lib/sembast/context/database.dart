@@ -6,6 +6,7 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sembast/sembast.dart';
 import 'package:sembast/sembast_io.dart';
+import 'package:sembast/utils/sembast_import_export.dart';
 import 'package:sembast_web/sembast_web.dart';
 
 import '../dao/kv.dart';
@@ -19,6 +20,12 @@ class SembastDatabase extends api.Database {
 
   /// 数据库路径
   final String path;
+
+  /// 完整路径
+  late String _fullPath;
+
+  @override
+  String get fullPath => _fullPath;
 
   SembastDatabase({
     required this.path,
@@ -43,6 +50,7 @@ class SembastDatabase extends api.Database {
     final appDocumentDir = await getApplicationDocumentsDirectory();
     // 获取全量数据库路径
     final fullPath = join(appDocumentDir.path, path);
+    _fullPath = fullPath;
     // 通过绝对路径打开数据库
     _database = await databaseFactoryIo.openDatabase(fullPath);
     log("sembast数据库打开成功");
@@ -84,5 +92,16 @@ class SembastDatabase extends api.Database {
     } else {
       await action(tx);
     }
+  }
+
+  @override
+  Future<Map> export() async {
+    return await exportDatabase(database);
+  }
+
+  @override
+  Future<void> import(Map data) async {
+    DatabaseFactory dbFactory = kIsWeb ? databaseFactoryWeb : databaseFactoryIo;
+    _database = await importDatabase(data, dbFactory, path);
   }
 }

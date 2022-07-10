@@ -101,7 +101,10 @@ class SembastDatabase extends api.Database {
 
   @override
   Future<void> import(Map data) async {
-    DatabaseFactory dbFactory = kIsWeb ? databaseFactoryWeb : databaseFactoryIo;
-    _database = await importDatabase(data, dbFactory, fullPath);
+    if (kIsWeb) {
+      _database = await importDatabase(data, databaseFactoryWeb, path);
+    } else {
+      _database = await importDatabase(data, databaseFactoryIo, fullPath);
+    }
   }
 }

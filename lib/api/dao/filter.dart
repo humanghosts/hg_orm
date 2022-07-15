@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:hg_orm/api/export.dart';
+
 /// 数据库查询的过滤条件
 abstract class Filter {
   /// 拷贝
@@ -118,6 +122,13 @@ class SingleFilter extends Filter {
   /// 至少包含一个(数据库中存储的值为多个，查询条件为多个)
   SingleFilter.containsOne({required this.field, required List value}) : op = SingleFilterOp.containsOne {
     appendList(value);
+  }
+
+  /// 自定义查询
+  SingleFilter.custom({required this.field, required this.op, required List value}) {
+    for (var value1 in value) {
+      append(value1);
+    }
   }
 
   /// 获取值类型
@@ -248,7 +259,13 @@ class GroupFilter extends Filter {
 extension SingleFilterMatchable on SingleFilter {
   /// 转换单个过滤条件
   bool isMatch(Map<String, Object?> record) {
-    return op.isMatch(record: record, field: field, valueList: value);
+    return op.isMatch(record: record, field: field, conditions: value) as bool;
+  }
+
+  /// 异步转换条件 适合用代码处理查询条件
+  /// record可以使用[ModelConvertor]或[AttributeConvertor]提供
+  Future<bool> isMatchAsync(Map<String, Object?> record) async {
+    return await op.isMatch(record: record, field: field, conditions: value);
   }
 }
 
@@ -272,6 +289,27 @@ extension GroupFilterMatchable on GroupFilter {
     }
     return GroupFilterOp.and == op;
   }
+
+  /// 异步转换条件 适合用代码处理查询条件
+  /// record可以使用[ModelConvertor]或[AttributeConvertor]提供
+  Future<bool> isMatchAsync(Map<String, Object?> record) async {
+    if (this.children.isEmpty) return false;
+    GroupFilterOp op = this.op;
+    List<Filter> children = this.children;
+    for (Filter child in children) {
+      bool isMatch;
+      if (child is GroupFilter) {
+        isMatch = await child.isMatchAsync(record);
+      } else if (child is SingleFilter) {
+        isMatch = await child.isMatchAsync(record);
+      } else {
+        continue;
+      }
+      if (GroupFilterOp.or == op && isMatch) return true;
+      if (GroupFilterOp.and == op && !isMatch) return false;
+    }
+    return GroupFilterOp.and == op;
+  }
 }
 
 /// 添加操作符步骤
@@ -281,17 +319,18 @@ extension GroupFilterMatchable on GroupFilter {
 ///   1.3 添加到list和map中
 /// 2. Filter类中添加命名构造函数
 /// 3. 不同数据库的convert类中，添加操作符转换
-class SingleFilterOp extends FilterOp {
+class SingleFilterOp<T extends Object> extends FilterOp {
+  /// 操作符需要的值的数量
   final int valueNumbers;
 
   /// 是否匹配
-  bool Function({
+  FutureOr<bool> Function({
     required Map<String, Object?> record,
     required String field,
-    required List<Object?> valueList,
+    required List<T?> conditions,
   }) isMatch;
 
-  SingleFilterOp._(String title, String symbol, {this.valueNumbers = 1, required this.isMatch}) : super._(title, symbol);
+  SingleFilterOp(String title, String symbol, {this.valueNumbers = 1, required this.isMatch}) : super._(title, symbol);
 
   static const equalsSymbol = "=";
   static const notEqualsSymbol = "!=";
@@ -311,11 +350,11 @@ class SingleFilterOp extends FilterOp {
   static const containsAllSymbol = "containsAll";
   static const containsOneSymbol = "containsOne";
 
-  static SingleFilterOp equals = SingleFilterOp._(
+  static SingleFilterOp equals = SingleFilterOp(
     "等于",
     equalsSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      Object? value = getValue(valueList, 0);
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      Object? value = getValue(conditions, 0);
       return getMatch(
         record: record,
         field: field,
@@ -332,11 +371,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp notEquals = SingleFilterOp._(
+  static SingleFilterOp notEquals = SingleFilterOp(
     "不等于",
     notEqualsSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      Object? value = getValue(valueList, 0);
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      Object? value = getValue(conditions, 0);
       return getMatch(
         record: record,
         field: field,
@@ -353,11 +392,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp isNull = SingleFilterOp._(
+  static SingleFilterOp isNull = SingleFilterOp(
     "为空",
     isNullSymbol,
     valueNumbers: 0,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
       return getMatch(
         record: record,
         field: field,
@@ -366,11 +405,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp notNull = SingleFilterOp._(
+  static SingleFilterOp notNull = SingleFilterOp(
     "非空",
     notNullSymbol,
     valueNumbers: 0,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
       return getMatch(
         record: record,
         field: field,
@@ -379,11 +418,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp lessThan = SingleFilterOp._(
+  static SingleFilterOp lessThan = SingleFilterOp(
     "小于",
     lessThanSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      Object? value = getValue(valueList, 0);
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      Object? value = getValue(conditions, 0);
       return getMatch(
         record: record,
         field: field,
@@ -399,11 +438,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp lessThanOrEquals = SingleFilterOp._(
+  static SingleFilterOp lessThanOrEquals = SingleFilterOp(
     "小于等于",
     lessThanOrEqualsSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      Object? value = getValue(valueList, 0);
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      Object? value = getValue(conditions, 0);
       return getMatch(
         record: record,
         field: field,
@@ -419,11 +458,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp greaterThan = SingleFilterOp._(
+  static SingleFilterOp greaterThan = SingleFilterOp(
     "大于",
     greaterThanSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      Object? value = getValue(valueList, 0);
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      Object? value = getValue(conditions, 0);
       return getMatch(
         record: record,
         field: field,
@@ -438,11 +477,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp greaterThanOrEquals = SingleFilterOp._(
+  static SingleFilterOp greaterThanOrEquals = SingleFilterOp(
     "大于等于",
     greaterThanOrEqualsSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      Object? value = getValue(valueList, 0);
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      Object? value = getValue(conditions, 0);
       return getMatch(
         record: record,
         field: field,
@@ -458,11 +497,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp inList = SingleFilterOp._(
+  static SingleFilterOp inList = SingleFilterOp(
     "在范围内",
     inListSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      List? value = getValue(valueList, 0) as List?;
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      List? value = getValue(conditions, 0) as List?;
       return getMatch(
         record: record,
         field: field,
@@ -470,11 +509,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp notInList = SingleFilterOp._(
+  static SingleFilterOp notInList = SingleFilterOp(
     "不在范围内",
     notInListSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      List? value = getValue(valueList, 0) as List?;
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      List? value = getValue(conditions, 0) as List?;
       return getMatch(
         record: record,
         field: field,
@@ -486,11 +525,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp matches = SingleFilterOp._(
+  static SingleFilterOp matches = SingleFilterOp(
     "匹配",
     matchesSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      String? value = getValue(valueList, 0) as String?;
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      String? value = getValue(conditions, 0) as String?;
       return getMatch(
         record: record,
         field: field,
@@ -502,11 +541,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp notMatches = SingleFilterOp._(
+  static SingleFilterOp notMatches = SingleFilterOp(
     "不匹配",
     matchesSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      String? value = getValue(valueList, 0) as String?;
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      String? value = getValue(conditions, 0) as String?;
       return getMatch(
         record: record,
         field: field,
@@ -518,11 +557,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp matchesStart = SingleFilterOp._(
+  static SingleFilterOp matchesStart = SingleFilterOp(
     "开始匹配",
     matchesSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      String? value = getValue(valueList, 0) as String?;
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      String? value = getValue(conditions, 0) as String?;
       return getMatch(
         record: record,
         field: field,
@@ -534,11 +573,11 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp notMatchesStart = SingleFilterOp._(
+  static SingleFilterOp notMatchesStart = SingleFilterOp(
     "开始不匹配",
     matchesSymbol,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
-      String? value = getValue(valueList, 0) as String?;
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
+      String? value = getValue(conditions, 0) as String?;
       return getMatch(
         record: record,
         field: field,
@@ -551,19 +590,19 @@ class SingleFilterOp extends FilterOp {
   );
 
   /// 左闭右开区间
-  static SingleFilterOp between = SingleFilterOp._(
+  static SingleFilterOp between = SingleFilterOp(
     "在区间内",
     betweenSymbol,
     valueNumbers: 2,
-    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> valueList}) {
+    isMatch: ({required Map<String, Object?> record, required String field, required List<Object?> conditions}) {
       return getMatch(
         record: record,
         field: field,
         isMatch: (recordValue) {
           int startInt = 0;
           int endInt = 0;
-          if (getValue(valueList, 0) is DateTime) startInt = (getValue(valueList, 0) as DateTime).millisecondsSinceEpoch;
-          if (getValue(valueList, 1) is DateTime) endInt = (getValue(valueList, 1) as DateTime).millisecondsSinceEpoch;
+          if (getValue(conditions, 0) is DateTime) startInt = (getValue(conditions, 0) as DateTime).millisecondsSinceEpoch;
+          if (getValue(conditions, 1) is DateTime) endInt = (getValue(conditions, 1) as DateTime).millisecondsSinceEpoch;
           if (null == recordValue) return false;
           if (recordValue is! int) return false;
           if (startInt == 0 && endInt == 0) return false;
@@ -577,20 +616,20 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp containsAll = SingleFilterOp._(
+  static SingleFilterOp containsAll = SingleFilterOp(
     "包含全部",
     containsAllSymbol,
     isMatch: ({
       required Map<String, Object?> record,
       required String field,
-      required List<Object?> valueList,
+      required List<Object?> conditions,
     }) {
       return getMatch(
         record: record,
         field: field,
         isMatch: (recordValue) {
           if (null == recordValue) return false;
-          List? filterValueList = getValue(valueList, 0) as List?;
+          List? filterValueList = getValue(conditions, 0) as List?;
           if (null == filterValueList) return false;
           List recordValueList = recordValue as List;
           for (var oneValue in filterValueList) {
@@ -601,20 +640,20 @@ class SingleFilterOp extends FilterOp {
       );
     },
   );
-  static SingleFilterOp containsOne = SingleFilterOp._(
+  static SingleFilterOp containsOne = SingleFilterOp(
     "至少包含一个",
     containsOneSymbol,
     isMatch: ({
       required Map<String, Object?> record,
       required String field,
-      required List<Object?> valueList,
+      required List<Object?> conditions,
     }) {
       return getMatch(
         record: record,
         field: field,
         isMatch: (recordValue) {
           if (null == recordValue) return false;
-          List? filterValueList = getValue(valueList, 0) as List?;
+          List? filterValueList = getValue(conditions, 0) as List?;
           if (null == filterValueList) return false;
           List recordValueList = recordValue as List;
           for (var oneValue in filterValueList) {

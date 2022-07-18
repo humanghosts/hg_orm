@@ -24,13 +24,31 @@ class SembastDatabase extends api.Database {
   /// 完整路径
   late String _fullPath;
 
-  @override
-  String get fullPath => _fullPath;
+  /// 数据库版本
+  final int _version;
+
+  /// 上一个数据库版本
+  int? _oldVersion;
+
+  /// 版本修改回调
+  final OnVersionChangedFunction? onVersionChanged;
 
   SembastDatabase({
     required this.path,
     bool? isLogicDelete,
-  }) : super(isLogicDelete: isLogicDelete);
+    int version = 1,
+    this.onVersionChanged,
+  })  : _version = version,
+        super(isLogicDelete: isLogicDelete);
+
+  @override
+  String get fullPath => _fullPath;
+
+  @override
+  int get version => database.version;
+
+  @override
+  int get oldVersion => _oldVersion ?? version;
 
   /// 获取Sembast数据库
   Database get database {
@@ -40,9 +58,18 @@ class SembastDatabase extends api.Database {
 
   /// 初始化数据库
   @override
-  Future<void> open() async {
+  Future<void> open({api.OnDatabaseVersionChanged? onVersionChanged}) async {
     if (kIsWeb) {
-      _database = await databaseFactoryWeb.openDatabase(path);
+      _database = await databaseFactoryWeb.openDatabase(
+        path,
+        version: _version,
+        onVersionChanged: (Database db, int oldVersion, int newVersion) async {
+          _oldVersion = oldVersion;
+          if (null == onVersionChanged) return;
+          if (onVersionChanged is Future) return await onVersionChanged(oldVersion, newVersion);
+          return onVersionChanged(oldVersion, newVersion);
+        },
+      );
       log("sembast_web数据库打开成功");
       return;
     }
@@ -52,12 +79,21 @@ class SembastDatabase extends api.Database {
     final fullPath = join(appDocumentDir.path, path);
     _fullPath = fullPath;
     // 通过绝对路径打开数据库
-    _database = await databaseFactoryIo.openDatabase(fullPath);
+    _database = await databaseFactoryIo.openDatabase(
+      fullPath,
+      version: _version,
+      onVersionChanged: (Database db, int oldVersion, int newVersion) async {
+        _oldVersion = oldVersion;
+        if (null == onVersionChanged) return;
+        if (onVersionChanged is Future) return await onVersionChanged(oldVersion, newVersion);
+        return onVersionChanged(oldVersion, newVersion);
+      },
+    );
     log("sembast数据库打开成功");
   }
 
   @override
-  Future<void> openKV() async {
+  Future<void> openKV({api.OnDatabaseVersionChanged? onVersionChanged}) async {
     assert(_database != null, "先打开数据库");
     _kv = SembastKV();
     await _kv!.init();

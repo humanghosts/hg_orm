@@ -1,4 +1,8 @@
+import 'dart:async';
+
 import 'package:hg_orm/hg_orm.dart';
+
+typedef OnDatabaseVersionChanged = FutureOr<dynamic> Function(int oldVersion, int newVersion);
 
 /// 数据库处理类
 abstract class Database {
@@ -11,6 +15,12 @@ abstract class Database {
 
   /// 数据库完整路径
   String get fullPath;
+
+  /// 数据库版本
+  int get version;
+
+  /// 上一个数据库版本
+  int get oldVersion;
 
   /// db专属，打开数据库
   Future<void> open();

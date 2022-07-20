@@ -55,14 +55,36 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   }
 
   @override
+  Future<void> saveRaw(Map<String, Object?> model, {api.Transaction? tx}) async {
+    await store.record(_storeName).put(api.Transaction.getOr(tx, dataBase), model);
+  }
+
+  @override
   Future<void> remove(T model, {api.Transaction? tx}) async {
     await store.record(_storeName).delete(api.Transaction.getOr(tx, dataBase));
     model.state = States.delete;
   }
 
   @override
+  Future<void> removeRaw(Map<String, Object?> model, {api.Transaction? tx}) async {
+    await store.record(_storeName).delete(api.Transaction.getOr(tx, dataBase));
+  }
+
+  @override
   Future<void> update(String id, Map<String, Object?> value, {api.Transaction? tx}) async {
     await store.record(_storeName).update(api.Transaction.getOr(tx, dataBase), value);
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> findRaw({api.Transaction? tx}) async {
+    List<Map<String, Object?>> modelList = [];
+    await withTransaction(tx, (tx) async {
+      Object? value = await store.record(_storeName).get(tx.getTx());
+      if (null == value) return;
+      Map<String, Object?> map = json.decode(json.encode(value)) as Map<String, Object?>;
+      modelList.add(map);
+    });
+    return modelList;
   }
 
   @override

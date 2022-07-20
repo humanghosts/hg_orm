@@ -73,6 +73,15 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   }
 
   @override
+  Future<void> saveRaw(Map<String, Object?> model, {api.Transaction? tx, bool? isLogicDelete}) async {
+    model[DataModel.createTimeKey] ??= DateTime.now().millisecondsSinceEpoch;
+    model[DataModel.timestampKey] = DateTime.now().millisecondsSinceEpoch;
+    String id = model[DataModel.idKey]! as String;
+    await store.record(id).put(api.Transaction.getOr(tx, dataBase), model);
+    api.DataModelCache.remove(id);
+  }
+
+  @override
   Future<void> update(String id, Map<String, Object?> value, {api.Transaction? tx}) async {
     await store.record(id).update(
       api.Transaction.getOr(tx, dataBase),
@@ -182,6 +191,21 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     }
   }
 
+  @override
+  Future<void> removeRaw(Map<String, Object?> model, {api.Transaction? tx, bool? isLogicDelete}) async {
+    bool logicDelete = isLogicDelete ?? this.isLogicDelete;
+    String id = model[DataModel.idKey]! as String;
+    if (logicDelete) {
+      model[DataModel.isDeleteKey] = true;
+      model[DataModel.deleteTimeKey] = DateTime.now().millisecondsSinceEpoch;
+      await store.record(id).update(api.Transaction.getOr(tx, dataBase), model);
+      api.DataModelCache.remove(id);
+      return;
+    }
+    await store.record(id).delete(api.Transaction.getOr(tx, dataBase));
+    api.DataModelCache.remove(id);
+  }
+
   /// 恢复，同时修改状态为query
   @override
   Future<void> recover(T model, {api.Transaction? tx}) async {
@@ -270,6 +294,46 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       modelListOrder.add(idMap[id]!);
     }
     return modelListOrder;
+  }
+
+  @override
+  Future<List<Map<String, Object?>>> findRaw({
+    api.Transaction? tx,
+    api.Filter? filter,
+    List<api.Sort>? sorts,
+    int? limit,
+    int? offset,
+    Boundary? start,
+    Boundary? end,
+    bool? isLogicDelete,
+  }) async {
+    bool logicDelete = isLogicDelete ?? this.isLogicDelete;
+    api.Filter? logicFilter = _getLogicFilter(filter, logicDelete);
+    List<SortOrder> sortOrders = [];
+    if (sorts != null) {
+      for (var one in sorts) {
+        SortOrder? oneSortOrder = await convertors.sortConvertor.to(one);
+        if (null == oneSortOrder) continue;
+        sortOrders.add(oneSortOrder);
+      }
+    }
+    Finder finder = Finder(
+      filter: await convertors.filterConvertor.to(logicFilter),
+      sortOrders: sortOrders,
+      limit: limit,
+      offset: offset,
+      start: start,
+      end: end,
+    );
+    List<Map<String, Object?>> modelList = [];
+    await withTransaction(tx, (tx) async {
+      List<RecordSnapshot> recordList = await store.find(tx.getTx(), finder: finder);
+      for (RecordSnapshot record in recordList) {
+        Map<String, Object?> map = json.decode(json.encode(record.value)) as Map<String, Object?>;
+        modelList.add(map);
+      }
+    });
+    return modelList;
   }
 
   /// 自定义查询

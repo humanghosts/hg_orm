@@ -37,6 +37,17 @@ abstract class Dao<T extends Model> {
 
   /// 查询
   Future<List<T>> find({Transaction? tx});
+
+  // === 操作原生map数据 ===
+
+  /// 保存
+  Future<void> saveRaw(Map<String, Object?> model, {Transaction? tx});
+
+  /// 删除
+  Future<void> removeRaw(Map<String, Object?> model, {Transaction? tx});
+
+  /// 查询原生数据
+  Future<List<Map<String, Object?>>> findRaw({Transaction? tx});
 }
 
 /// 用于数据模型(通过id作为数据标识)的dao基类
@@ -104,6 +115,18 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
 
   /// 计数
   Future<int> count({Filter? filter, Transaction? tx, bool? isLogicDelete});
+
+  /// 保存
+  @override
+  Future<void> saveRaw(Map<String, Object?> model, {Transaction? tx, bool? isLogicDelete});
+
+  /// 删除
+  @override
+  Future<void> removeRaw(Map<String, Object?> model, {Transaction? tx, bool? isLogicDelete});
+
+  /// 查询原生数据
+  @override
+  Future<List<Map<String, Object?>>> findRaw({Transaction? tx, bool? isLogicDelete});
 }
 
 abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {

@@ -66,6 +66,11 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   }
 
   @override
+  Future<void> removeAll({api.Transaction? tx}) async {
+    await store.delete(api.Transaction.getOr(tx, dataBase));
+  }
+
+  @override
   Future<void> removeRaw(Map<String, Object?> model, {api.Transaction? tx}) async {
     await store.record(_storeName).delete(api.Transaction.getOr(tx, dataBase));
   }

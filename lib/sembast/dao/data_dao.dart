@@ -146,6 +146,13 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     model.state = States.delete;
   }
 
+  /// 逻辑移除
+  @override
+  Future<void> removeAll({api.Transaction? tx}) async {
+    await store.delete(api.Transaction.getOr(tx, dataBase));
+    api.DataModelCache.clear();
+  }
+
   /// 移除
   @override
   Future<void> removeList(List<T> modelList, {api.Transaction? tx, bool? isLogicDelete}) async {

@@ -35,6 +35,9 @@ abstract class Dao<T extends Model> {
   /// 删除
   Future<void> remove(T model, {Transaction? tx});
 
+  /// 删除全部
+  Future<void> removeAll({Transaction? tx});
+
   /// 查询
   Future<List<T>> find({Transaction? tx});
 

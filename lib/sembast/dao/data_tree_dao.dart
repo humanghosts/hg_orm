@@ -49,16 +49,16 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
         return;
       }
       // 换成id的过滤条件，简化一下
-      Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
+      Finder finder = Finder(filter: Filter.inList(DataModel.idKey, idList));
       bool logicDelete = isLogicDelete ?? this.isLogicDelete;
       if (logicDelete) {
         // 逻辑删除
         await store.update(
             tx.getTx(),
             {
-              sampleModel.isDelete.name: true,
-              sampleModel.deleteTime.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
-              sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+              DataModel.isDeleteKey: true,
+              DataModel.deleteTimeKey: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+              DataModel.timestampKey: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
             },
             finder: finder);
       } else {
@@ -85,17 +85,17 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
     List<Filter> filters = [];
     for (RecordSnapshot record in recordList) {
       Map<String, Object?> map = record.value as Map<String, Object?>;
-      idList.add(map[sampleModel.id.name] as String);
+      idList.add(map[DataModel.idKey] as String);
       // 全路径 肯定存在，不存在就算了
-      Object? fullPathValue = map[sampleModel.fullPath.name];
+      Object? fullPathValue = map[DataTreeModel.fullPathKey];
       if (null == fullPathValue) {
         continue;
       }
       String fullPath = fullPathValue as String;
       // 下级过滤条件
-      filters.add(Filter.matches(sampleModel.fullPath.name, "^(${fullPath.replaceAll("|", "\\|")}\\|)[0-9a-zA-Z|]+\$"));
+      filters.add(Filter.matches(DataTreeModel.fullPathKey, "^(${fullPath.replaceAll("|", "\\|")}\\|)[0-9a-zA-Z|]+\$"));
     }
-    filters.insert(0, Filter.inList(sampleModel.id.name, idList));
+    filters.insert(0, Filter.inList(DataModel.idKey, idList));
     return await store.findKeys(tx.getTx(), finder: Finder(filter: Filter.or(filters)));
   }
 
@@ -122,13 +122,13 @@ class SembastDataTreeDao<T extends DataTreeModel> extends SembastDataDao<T> impl
       List<String> idList = await _getTreeIdList(filter, tx, isLogicDelete: isLogicDelete) as List<String>;
       if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
-      Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
+      Finder finder = Finder(filter: Filter.inList(DataModel.idKey, idList));
       await store.update(
           tx.getTx(),
           {
-            sampleModel.isDelete.name: false,
-            sampleModel.deleteTime.name: null,
-            sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+            DataModel.isDeleteKey: false,
+            DataModel.deleteTimeKey: null,
+            DataModel.timestampKey: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
           },
           finder: finder);
       recoverIdList = idList;

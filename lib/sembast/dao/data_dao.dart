@@ -18,12 +18,12 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   @override
   SembastConvertors get convertors => super.convertors as SembastConvertors;
 
-  SembastDataDao({bool? isLogicDelete})
+  SembastDataDao({bool? isLogicDelete, String? storeName})
       : super(
           isLogicDelete: isLogicDelete,
           convertors: SembastConvertors.instance,
         ) {
-    store = stringMapStoreFactory.store(T.toString());
+    store = stringMapStoreFactory.store(storeName ?? T.toString());
   }
 
   @override
@@ -48,8 +48,10 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   @override
   Future<void> save(T model, {api.Transaction? tx, bool? isLogicDelete}) async {
     States oldStates = model.state;
-    model.createTime.value ??= DateTime.now();
-    model.timestamp.value = DateTime.now();
+    DateTime now = DateTime.now();
+    model.createTime.value ??= now;
+    model.timestamp.value = now;
+    model.version.value = dataBase.version.toString();
     await store
         .record(model.id.value)
         .put(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: isLogicDelete));
@@ -74,8 +76,11 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
 
   @override
   Future<void> saveRaw(Map<String, Object?> model, {api.Transaction? tx, bool? isLogicDelete}) async {
-    model[DataModel.createTimeKey] ??= DateTime.now().millisecondsSinceEpoch;
-    model[DataModel.timestampKey] = DateTime.now().millisecondsSinceEpoch;
+    DateTime now = DateTime.now();
+    int nowValue = convertors.attributeConvertor.datetime.getValue(now);
+    model[DataModel.createTimeKey] ??= nowValue;
+    model[DataModel.timestampKey] = nowValue;
+    model[DataModel.versionKey] = dataBase.version.toString();
     String id = model[DataModel.idKey]! as String;
     await store.record(id).put(api.Transaction.getOr(tx, dataBase), model);
     api.DataModelCache.remove(id);
@@ -87,7 +92,8 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       api.Transaction.getOr(tx, dataBase),
       {
         ...value,
-        sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+        DataModel.timestampKey: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+        DataModel.versionKey: dataBase.version.toString(),
       },
     );
     api.DataModelCache.remove(id);
@@ -111,13 +117,14 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       List<String> idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter))) as List<String>;
       if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
-      Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
+      Finder finder = Finder(filter: Filter.inList(DataModel.idKey, idList));
       // 更新
       await store.update(
         tx.getTx(),
         {
           ...value,
-          sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+          DataModel.timestampKey: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+          DataModel.versionKey: dataBase.version.toString(),
         },
         finder: finder,
       );
@@ -134,7 +141,10 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     bool logicDelete = isLogicDelete ?? this.isLogicDelete;
     if (logicDelete) {
       model.isDelete.value = true;
-      model.deleteTime.value = DateTime.now();
+      DateTime now = DateTime.now();
+      model.deleteTime.value = now;
+      model.timestamp.value = now;
+      model.version.value = dataBase.version.toString();
       await store
           .record(model.id.value)
           .update(api.Transaction.getOr(tx, dataBase), await convertors.modelConvertor.getValue(model, tx: tx, isLogicDelete: logicDelete));
@@ -174,15 +184,17 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       List<String> idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter))) as List<String>;
       if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
-      Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
+      Finder finder = Finder(filter: Filter.inList(DataModel.idKey, idList));
       if (logicDelete) {
+        DateTime now = DateTime.now();
         // 逻辑删除
         await store.update(
           tx.getTx(),
           {
-            sampleModel.isDelete.name: true,
-            sampleModel.deleteTime.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
-            sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+            DataModel.isDeleteKey: true,
+            DataModel.deleteTimeKey: convertors.attributeConvertor.datetime.getValue(now),
+            DataModel.timestampKey: convertors.attributeConvertor.datetime.getValue(now),
+            DataModel.versionKey: dataBase.version.toString(),
           },
           finder: finder,
         );
@@ -203,8 +215,12 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     bool logicDelete = isLogicDelete ?? this.isLogicDelete;
     String id = model[DataModel.idKey]! as String;
     if (logicDelete) {
+      DateTime now = DateTime.now();
+      int nowValue = convertors.attributeConvertor.datetime.getValue(now);
       model[DataModel.isDeleteKey] = true;
-      model[DataModel.deleteTimeKey] = DateTime.now().millisecondsSinceEpoch;
+      model[DataModel.deleteTimeKey] = nowValue;
+      model[DataModel.timestampKey] = nowValue;
+      model[DataModel.versionKey] = dataBase.version.toString();
       await store.record(id).update(api.Transaction.getOr(tx, dataBase), model);
       api.DataModelCache.remove(id);
       return;
@@ -219,6 +235,8 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     if (model.isDelete.value == false) return;
     model.isDelete.value = false;
     model.deleteTime.value = null;
+    model.timestamp.value = DateTime.now();
+    model.version.value = dataBase.version.toString();
     // 直接替换数据
     await store.record(model.id.value).put(
           api.Transaction.getOr(tx, dataBase),
@@ -251,13 +269,14 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       List<String> idList = await store.findKeys(tx.getTx(), finder: Finder(filter: await convertors.filterConvertor.to(filter))) as List<String>;
       if (idList.isEmpty) return;
       // 换成id的过滤条件，简化一下
-      Finder finder = Finder(filter: Filter.inList(sampleModel.id.name, idList));
+      Finder finder = Finder(filter: Filter.inList(DataModel.idKey, idList));
       await store.update(
         tx.getTx(),
         {
-          sampleModel.isDelete.name: false,
-          sampleModel.deleteTime.name: null,
-          sampleModel.timestamp.name: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+          DataModel.isDeleteKey: false,
+          DataModel.deleteTimeKey: null,
+          DataModel.timestampKey: convertors.attributeConvertor.datetime.getValue(DateTime.now()),
+          DataModel.versionKey: dataBase.version.toString(),
         },
         finder: finder,
       );
@@ -274,7 +293,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   Future<T?> findByID(String id, {api.Transaction? tx, bool? isLogicDelete}) async {
     List<T> newModelList = await find(
       tx: tx,
-      filter: api.SingleFilter.equals(field: sampleModel.id.name, value: id),
+      filter: api.SingleFilter.equals(field: DataModel.idKey, value: id),
       isLogicDelete: isLogicDelete,
     );
     if (newModelList.isEmpty) return null;
@@ -286,7 +305,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
   Future<List<T>> findByIDList(List<String> idList, {api.Transaction? tx, bool? isLogicDelete}) async {
     List<T> modelList = await find(
       tx: tx,
-      filter: api.SingleFilter.inList(field: sampleModel.id.name, value: idList),
+      filter: api.SingleFilter.inList(field: DataModel.idKey, value: idList),
       isLogicDelete: isLogicDelete,
     );
     if (modelList.isEmpty) return [];
@@ -388,10 +407,10 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     }
     api.Filter logicFindFilter;
     if (null == filter) {
-      logicFindFilter = api.SingleFilter.notEquals(field: sampleModel.isDelete.name, value: true);
+      logicFindFilter = api.SingleFilter.notEquals(field: DataModel.isDeleteKey, value: true);
     } else {
       logicFindFilter = api.GroupFilter.and([
-        api.SingleFilter.notEquals(field: sampleModel.isDelete.name, value: true),
+        api.SingleFilter.notEquals(field: DataModel.isDeleteKey, value: true),
         filter,
       ]);
     }
@@ -460,7 +479,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
       // 单个数据转换为map
       Map<String, Object?> map = json.decode(json.encode(record.value)) as Map<String, Object?>;
       // 获取dataModel的主键
-      String id = map[sampleModel.id.name] as String;
+      String id = map[DataModel.idKey] as String;
       // 查询缓存是否存在当前dataModel
       api.DataModelCacheNode<T>? cacheNode = api.DataModelCache.get(id);
       // 缓存不存在，将转换后的结果收集
@@ -496,7 +515,7 @@ class SembastDataDao<T extends DataModel> extends api.DataDao<T> {
     List<T> modelList = [];
     await withTransaction(tx, (tx) async {
       for (var map in mapList) {
-        String id = map[sampleModel.id.name] as String;
+        String id = map[DataModel.idKey] as String;
         // 在merge中，fill之前，已经将mode放入undone缓存中，这里直接取即可
         api.DataModelCacheNode<T> cacheNode = api.DataModelCache.get(id)!;
         await convertors.modelConvertor.getModelByModel(cacheNode.model, map, tx: tx, isLogicDelete: isLogicDelete);

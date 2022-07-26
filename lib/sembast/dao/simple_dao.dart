@@ -18,8 +18,8 @@ class SembastSimpleDao<T extends SimpleModel> extends api.SimpleDao<T> {
   /// 数据库地址
   late String _storeName;
 
-  SembastSimpleDao() : super(convertors: SembastConvertors.instance) {
-    _storeName = T.toString();
+  SembastSimpleDao({String? storeName}) : super(convertors: SembastConvertors.instance) {
+    _storeName = storeName ?? T.toString();
     store = stringMapStoreFactory.store("simple");
   }
 

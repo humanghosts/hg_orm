@@ -3,22 +3,13 @@ import 'package:hg_orm/hg_orm.dart';
 
 /// dao的基类
 abstract class Dao<T extends Model> {
-  /// 实体例
-  late final T _sampleModel;
-
   /// 类型转换
   late final Convertors _convertors;
-
-  /// 样本模型
-  T get sampleModel => _sampleModel;
 
   /// 转换器
   Convertors get convertors => _convertors;
 
-  Dao({required Convertors convertors}) {
-    _sampleModel = ConstructorCache.get(T);
-    _convertors = convertors;
-  }
+  Dao({required Convertors convertors}) : _convertors = convertors;
 
   /// 新建一个事务
   Future<void> transaction(Future<void> Function(Transaction tx) action);
@@ -129,17 +120,14 @@ abstract class DataDao<T extends DataModel> extends Dao<T> {
 
   /// 查询原生数据
   @override
-  Future<List<Map<String, Object?>>> findRaw({Transaction? tx, bool? isLogicDelete});
+  Future<List<Map<String, Object?>>> findRaw({Filter? filter, List<Sort>? sorts, Transaction? tx, bool? isLogicDelete});
 }
 
 abstract class DataTreeDao<T extends DataTreeModel> extends DataDao<T> {
   DataTreeDao({
     bool? isLogicDelete,
     required Convertors convertors,
-  }) : super(
-          isLogicDelete: isLogicDelete,
-          convertors: convertors,
-        );
+  }) : super(isLogicDelete: isLogicDelete, convertors: convertors);
 
   /// [isRemoveChildren] 指是否同时删除子事件
   @override
